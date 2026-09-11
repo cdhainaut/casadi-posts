@@ -1,0 +1,47 @@
+[
+  {
+    "label": "elimination",
+    "variables": 29,
+    "nnz_hessian": 435,
+    "nodes_jacobian": 19618,
+    "nodes_hessian": 231332,
+    "build_hessian_s": 0.2895525439962512,
+    "hessian_ms": 12.172086499049328
+  },
+  {
+    "label": "elimination, A frozen",
+    "variables": 29,
+    "nnz_hessian": 351,
+    "nodes_jacobian": 1339,
+    "nodes_hessian": 3097,
+    "build_hessian_s": 0.07792283600429073,
+    "hessian_ms": 0.4377330005809199
+  },
+  {
+    "label": "elimination, g linear",
+    "variables": 29,
+    "nnz_hessian": 135,
+    "nodes_jacobian": 19608,
+    "nodes_hessian": 70165,
+    "build_hessian_s": 0.07908349199715303,
+    "hessian_ms": 2.097230499202851
+  },
+  {
+    "label": "SAND (closure constraints)",
+    "variables": 53,
+    "nnz_hessian": 1153,
+    "nodes_jacobian": 19652,
+    "nodes_hessian": 230741,
+    "build_hessian_s": 0.30698690099961823,
+    "hessian_ms": 13.471473503159359
+  },
+  {
+    "label": "rootfinder (implicit)",
+    "variables": 29,
+    "nnz_hessian": 435,
+    "nodes_jacobian": 19570,
+    "nodes_hessian": 230597,
+    "build_hessian_s": 1.2742065460042795,
+    "hessian_ms": 60.3902585025935
+  }
+]
