@@ -17,6 +17,79 @@ Writing all of it as a single NLP is the natural thing to do: the optimiser
 explores the design space and the trajectory at the same time. It also changes the
 shape of the derivatives in a way that is easy to miss.
 
+## The example
+
+`example.py` reuses the model of the first post — a dense matrix built from
+coordinates that depend on the design parameters, a response, and a non-linear
+output — and repeats it over `K` conditions:
+
+```python
+coordinates = (
+    locator
+    + 0.12 * design_k[0] * (1.0 - locator**2)
+    + 0.08 * design_k[1] * locator * (1.0 - locator**2)
+)
+span = cas.reshape(coordinates, N, 1)
+difference = cas.repmat(span, 1, N) - cas.repmat(span.T, N, 1) + cas.MX.eye(N)
+kernel = ((coordinates[1] - coordinates[0]) / (4.0 * np.pi)) / difference
+kernel = kernel - cas.diag(cas.diag(kernel))
+```
+
+Three writings of the same problem are compared:
+
+| writing | design parameters |
+|---|---|
+| `design shared` | one block, used by every condition |
+| `design per condition` | one independent block per condition |
+| `design frozen` | constants |
+
+The first two have identical local models and therefore identical differentiation
+work per condition. The only difference is the sharing.
+
+## What the measurements say
+
+![patterns](figures/hessian_patterns.png)
+
+| writing | variables | Hessian nonzeros | density | Hessian graph | one evaluation |
+|---|---:|---:|---:|---:|---:|
+| design shared | 55 | 673 | 44 % | 7 934 | 0.69 ms |
+| design per condition | 63 | 693 | 34 % | 7 944 | 0.68 ms |
+| design frozen | 55 | 459 | 30 % | 2 488 | 0.34 ms |
+
+Three observations:
+
+1. **Sharing couples everything.** With one shared block, the design columns run
+   through the whole Hessian: every condition is connected to every other one
+   through the design. With one block per condition, the Hessian keeps its block
+   structure. The nonzeros are almost the same; the connectivity is not — and
+   connectivity is what a sparse factorisation pays for.
+2. **Sharing does not cost more to differentiate.** Both writings walk the same
+   graph (7 934 and 7 944 nodes), because the local model is the same. Sharing
+   even removes eight variables. The structural coupling is not a hidden
+   differentiation cost.
+3. **Depending on the design is what costs.** Freezing the design parameters cuts
+   the graph by 3.2 and the evaluation time by half. That is the same effect the
+   first post isolated, seen from the other side.
+
+![cost](figures/cost.png)
+
+## What to take away
+
+Putting the design in the same NLP as the trajectory is a structural choice, not
+a performance trap:
+
+- you gain a single joint problem, solved once, with the coupling handled by the
+  KKT system;
+- you pay a denser Lagrangian Hessian (44 % against 34 % here) and wide design
+  columns. Order the variables so that the design block comes first or last, and
+  the sparsity pattern stays as close to block-arrow as it can be;
+- you do not pay extra differentiation: as long as the model depends on the
+  design, the derivative work is the same whether the design is shared or local.
+
+What is *not* measured here: how that connectivity translates into the cost of the
+KKT factorisation inside a given NLP solver. The graph is only one of the two
+costs; the linear algebra is the other.
+
 ## Where this shows up
 
 This is the standard shape of multidisciplinary optimisation: one set of design
@@ -40,90 +113,21 @@ variables, many conditions, and a model that couples them.
 
 The naming is old and stable: optimising analysis variables and design variables
 as one problem is *simultaneous analysis and design* (SAND), the alternative being
-to solve the analysis inside an outer design loop. The first keeps the coupling in
-the KKT matrix; the second keeps the blocks separate but pays for many more
-design iterations. Both are correct — the point of this post is only to make the
-structural cost of the first one visible.
-
-## The example
-
-`example.py` reuses the same model as the first post — a dense matrix
-built from coordinates that depend on the design parameters, a response, and a
-non-linear output — and repeats it over `K` conditions:
-
-```python
-for k in range(K):
-    matrix = cas.MX.eye(N) + cas.diag(OMEGA * weights / state[k]) @ kernel
-    rhs = OMEGA * weights * (controls[:, k] + 0.1 * locator)
-    response = cas.solve(matrix, rhs)
-    argument = controls[:, k] + COUPLING * (kernel @ response) / state[k]
-    objectives.append(cas.sum1((OMEGA * argument - 5.0 * argument**3) * weights))
-```
-
-Three writings of the same problem are compared:
-
-| writing | design parameters |
-|---|---|
-| `design shared` | one block, used by every condition |
-| `design per condition` | one independent block per condition |
-| `design frozen` | constants |
-
-The first two have identical local models and therefore identical differentiation
-work per condition. The only difference is the sharing.
-
-## What the measurements say
-
-![patterns](figures/hessian_patterns.png)
-
-![cost](figures/cost.png)
-
-| writing | variables | Hessian nonzeros | density | Hessian graph | one evaluation |
-|---|---:|---:|---:|---:|---:|
-| design shared | 55 | 673 | 44 % | 235 k nodes | 12.2 ms |
-| design per condition | 63 | 693 | 34 % | 235 k nodes | 11.9 ms |
-| design frozen | 55 | 459 | 30 % | 4 k nodes | 0.4 ms |
-
-Three observations:
-
-1. **Sharing couples everything.** With one shared block, the design columns run
-   through the whole Hessian: every condition is connected to every other one
-   through the design. With one block per condition, the Hessian keeps its block
-   structure. Same number of nonzeros, very different connectivity — and that
-   connectivity is what a sparse factorisation pays for.
-2. **Coupling does not make the graph bigger.** The shared and per-condition
-   writings walk the same 235 000-node graph, because the local model is the same.
-   What costs is that the model depends on the design at all.
-3. **Freezing the design is what makes a difference** — 4 000 nodes instead of
-   235 000. It also gives up the thing you wanted: optimising the design.
-
-## What to take away
-
-Putting the design in the same NLP as the trajectory is a trade, not a free
-win:
-
-- you gain a single joint problem, solved once, with the coupling handled by the
-  KKT system;
-- you pay a denser Lagrangian Hessian (here 44 % against 34 %) and a graph that
-  stays large as long as the model depends on the design.
-
-Two practical consequences for a CasADi model:
-
-- if the design parameters are few and shared, expect dense columns in the
-  Hessian; ordering the variables so that the design block comes first (or last)
-  keeps the factorisation as close to block-arrow as possible;
-- if a part of the model can be evaluated without the design — a precomputed
-  table, a frozen influence matrix — moving it out of the differentiation path is
-  worth far more than any solver-level trick.
+to solve the analysis inside an outer design loop.
 
 ## Reproduce
 
 ```bash
-python example.py     # a few seconds: results.json + patterns.npz
+python example.py     # results.json + patterns.npz
 python figures.py     # figures/hessian_patterns.png + figures/cost.png
 ```
 
 Times are single-thread medians on a shared workstation and move by about 20 %
 between runs; the graph sizes and the ranking do not.
+
+Remember the first lesson of the companion post: write the dense kernel as a
+matrix expression. On this model, the scalar-loop version measured 235 000 nodes
+against 7 900 here — identical numbers, thirty times the work.
 
 ## References
 

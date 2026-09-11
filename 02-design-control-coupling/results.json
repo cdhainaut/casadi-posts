@@ -5,10 +5,10 @@
     "constraints": 3,
     "nnz_jacobian": 63,
     "nnz_hessian": 693,
-    "nodes_jacobian": 17020,
-    "nodes_hessian": 234867,
-    "build_s": 0.29597806299716467,
-    "hessian_ms": 11.920324497623369
+    "nodes_jacobian": 598,
+    "nodes_hessian": 7944,
+    "build_s": 0.011641744000371546,
+    "hessian_ms": 0.680102501064539
   },
   {
     "label": "design shared",
@@ -16,10 +16,10 @@
     "constraints": 3,
     "nnz_jacobian": 63,
     "nnz_hessian": 673,
-    "nodes_jacobian": 17028,
-    "nodes_hessian": 234857,
-    "build_s": 0.3526601999983541,
-    "hessian_ms": 12.213283498567762
+    "nodes_jacobian": 606,
+    "nodes_hessian": 7934,
+    "build_s": 0.013501756999175996,
+    "hessian_ms": 0.6921809981577098
   },
   {
     "label": "design frozen",
@@ -27,9 +27,9 @@
     "constraints": 3,
     "nnz_jacobian": 51,
     "nnz_hessian": 459,
-    "nodes_jacobian": 1699,
-    "nodes_hessian": 3907,
-    "build_s": 0.10795271999813849,
-    "hessian_ms": 0.3938395020668395
+    "nodes_jacobian": 280,
+    "nodes_hessian": 2488,
+    "build_s": 0.005591327993897721,
+    "hessian_ms": 0.34464250347809866
   }
 ]

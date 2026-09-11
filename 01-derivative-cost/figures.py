@@ -23,7 +23,7 @@ SAND = "SAND (closure constraints)"
 
 COLORS = {
     "elimination": "#1f4e79",
-    "elimination, A frozen": "#8ab6e0",
+    "elimination, A design-frozen": "#8ab6e0",
     "elimination, g linear": "#2e8b57",
     "SAND (closure constraints)": "#e08214",
     "rootfinder (implicit)": "#c0392b",
@@ -128,12 +128,66 @@ def patterns_figure(data, cases: list[dict]) -> None:
     print("wrote figures/patterns.png")
 
 
+def scaling_figure() -> None:
+    rows = json.loads((HERE / "scaling.json").read_text(encoding="utf-8"))
+    sizes = np.array([row["N"] for row in rows], dtype=float)
+    series = (
+        ("gradient", "nodes_gradient", "#2e8b57", "o", "gradient graph"),
+        ("exact Hessian", "nodes_hessian", "#1f4e79", "s", "exact Hessian graph"),
+        ("Hessian, design frozen", "nodes_hessian_frozen", "#8ab6e0", "^",
+         "Hessian graph, design frozen"),
+    )
+    times = (
+        ("gradient", "gradient_ms", "#2e8b57", "o", None),
+        ("exact Hessian", "hessian_ms", "#1f4e79", "s", None),
+        ("Hessian, design frozen", "hessian_frozen_ms", "#8ab6e0", "^", None),
+    )
+
+    fig, axes = plt.subplots(1, 2, figsize=(12.5, 4.8))
+    for ax, spec, title, ylabel in (
+        (axes[0], series, "Size of the derivative graph", "nodes in the graph"),
+        (axes[1], times, "Cost of one evaluation", "milliseconds"),
+    ):
+        for label, key, color, marker, _ in spec:
+            if key is None:
+                continue
+            values = np.array([row[key] for row in rows], dtype=float)
+            ax.loglog(sizes, values, marker=marker, color=color, label=label,
+                      linewidth=1.4, markersize=5)
+        ax.set_title(title, fontsize=11.5, pad=10)
+        ax.set_xlabel("dense system size N", fontsize=9.5)
+        ax.set_ylabel(ylabel, fontsize=9.5)
+        ax.grid(which="both", alpha=0.2, linewidth=0.6)
+        ax.set_axisbelow(True)
+        ax.legend(fontsize=9, frameon=False)
+
+    increment = np.array([row["hessian_ms"] / row["hessian_frozen_ms"] for row in rows])
+    axes[1].annotate(
+        f"frozen helps by \u00d7{increment[1]:.1f} at N={int(sizes[1])}\n"
+        f"and by only \u00d7{increment[-1]:.1f} at N={int(sizes[-1])}",
+        xy=(sizes[-1], rows[-1]["hessian_ms"]),
+        xytext=(sizes[0] * 1.15, rows[-1]["hessian_ms"] * 0.35),
+        fontsize=8.5,
+        color="0.3",
+    )
+    fig.suptitle(
+        "The gradient stays cheap while the exact Hessian leaves it behind",
+        fontsize=12.5,
+        y=0.98,
+    )
+    fig.tight_layout(rect=(0, 0.02, 1, 0.93))
+    fig.savefig(FIGURES / "scaling.png", dpi=170)
+    plt.close(fig)
+    print("wrote figures/scaling.png")
+
+
 def main() -> None:
     FIGURES.mkdir(exist_ok=True)
     cases = json.loads((HERE / "results.json").read_text(encoding="utf-8"))
     data = np.load(HERE / "patterns.npz")
     cost_figure(cases)
     patterns_figure(data, cases)
+    scaling_figure()
 
 
 if __name__ == "__main__":

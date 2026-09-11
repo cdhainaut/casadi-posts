@@ -78,17 +78,16 @@ for label, designs in writings.items():
     for k in range(K):
         design_k = designs[k]
         column = controls[:, k]
-        coordinates = locator * (1.0 + 0.4 * design_k[1] * locator) * (
-            0.5 + 0.2 * design_k[0]
+        coordinates = (
+            locator
+            + 0.12 * design_k[0] * (1.0 - locator**2)
+            + 0.08 * design_k[1] * locator * (1.0 - locator**2)
         )
         weights = WEIGHT * design_k[2] * (1.0 - 0.4 * design_k[3] * locator)
-        kernel = cas.MX.zeros(N, N)
-        for i in range(N):
-            for j in range(N):
-                if i != j:  # rational in the coordinates: dense and non-linear
-                    kernel[i, j] = (coordinates[1] - coordinates[0]) / (
-                        4.0 * np.pi * (coordinates[i] - coordinates[j])
-                    )
+        span = cas.reshape(coordinates, N, 1)
+        difference = cas.repmat(span, 1, N) - cas.repmat(span.T, N, 1) + cas.MX.eye(N)
+        kernel = ((coordinates[1] - coordinates[0]) / (4.0 * np.pi)) / difference
+        kernel = kernel - cas.diag(cas.diag(kernel))
         matrix = cas.MX.eye(N) + cas.diag(OMEGA * weights / state[k]) @ kernel
         rhs = OMEGA * weights * (column + 0.1 * locator)
         response = cas.solve(matrix, rhs)

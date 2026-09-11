@@ -3,45 +3,55 @@
     "label": "elimination",
     "variables": 29,
     "nnz_hessian": 435,
-    "nodes_jacobian": 19618,
-    "nodes_hessian": 231332,
-    "build_hessian_s": 0.2895525439962512,
-    "hessian_ms": 12.172086499049328
+    "nodes_primal": 82,
+    "nodes_gradient": 189,
+    "nodes_jacobian": 389,
+    "nodes_hessian": 3947,
+    "build_s": 0.007730197990895249,
+    "hessian_ms": 0.7632950000697747
   },
   {
-    "label": "elimination, A frozen",
+    "label": "elimination, A design-frozen",
     "variables": 29,
-    "nnz_hessian": 351,
-    "nodes_jacobian": 1339,
-    "nodes_hessian": 3097,
-    "build_hessian_s": 0.07792283600429073,
-    "hessian_ms": 0.4377330005809199
+    "nnz_hessian": 325,
+    "nodes_primal": 42,
+    "nodes_gradient": 78,
+    "nodes_jacobian": 196,
+    "nodes_hessian": 1431,
+    "build_s": 0.003683354996610433,
+    "hessian_ms": 0.4186075020697899
   },
   {
     "label": "elimination, g linear",
     "variables": 29,
     "nnz_hessian": 135,
-    "nodes_jacobian": 19608,
-    "nodes_hessian": 70165,
-    "build_hessian_s": 0.07908349199715303,
-    "hessian_ms": 2.097230499202851
+    "nodes_primal": 77,
+    "nodes_gradient": 179,
+    "nodes_jacobian": 379,
+    "nodes_hessian": 868,
+    "build_s": 0.0028592140006367117,
+    "hessian_ms": 0.1864279984147288
   },
   {
     "label": "SAND (closure constraints)",
     "variables": 53,
     "nnz_hessian": 1153,
-    "nodes_jacobian": 19652,
-    "nodes_hessian": 230741,
-    "build_hessian_s": 0.30698690099961823,
-    "hessian_ms": 13.471473503159359
+    "nodes_primal": 69,
+    "nodes_gradient": 152,
+    "nodes_jacobian": 423,
+    "nodes_hessian": 3356,
+    "build_s": 0.007763871006318368,
+    "hessian_ms": 0.4861054985667579
   },
   {
     "label": "rootfinder (implicit)",
     "variables": 29,
     "nnz_hessian": 435,
-    "nodes_jacobian": 19570,
-    "nodes_hessian": 230597,
-    "build_hessian_s": 1.2742065460042795,
-    "hessian_ms": 60.3902585025935
+    "nodes_primal": 71,
+    "nodes_gradient": 159,
+    "nodes_jacobian": 341,
+    "nodes_hessian": 3212,
+    "build_s": 0.021476217996678315,
+    "hessian_ms": 1.718735002214089
   }
 ]
