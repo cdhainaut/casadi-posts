@@ -59,6 +59,9 @@ derivatives — and that part is not an approximation.
 python example.py     # a few seconds
 ```
 
-It prints the table above and writes `hessian_structure.png`. The measurements used
-along the way — the three layouts including a frozen design, their evaluation
-times, the raw patterns — live in `validation/`.
+It prints the table above and writes `hessian_structure.png`.
+
+```bash
+python example.py
+cd validation && python figures.py   # the three layouts measured, including a frozen design
+```

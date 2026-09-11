@@ -1,8 +1,6 @@
 # Validation for the second post
 
-The article shows what sharing a design block across conditions does to the
-sparsity of the Lagrangian Hessian. This folder holds the measurements taken while
-establishing it.
+Scripts and raw numbers behind the tables of the second article.
 
 | file | what it does |
 |---|---|
@@ -15,5 +13,5 @@ establishing it.
 python figures.py
 ```
 
-The three layouts measured there include a frozen design — the case where each
-condition stands alone — which the article discusses but does not plot.
+The three layouts measured there include a frozen design, the case where each
+condition stands alone.

@@ -1,9 +1,6 @@
 # Validation for the first post
 
-The article quotes three things: the cost of a gradient, of a Hessian-vector
-product, of an exact Hessian, and of the same Hessian when the coefficient matrix
-no longer depends on the variables. This folder holds everything used to establish
-them, and the checks that they mean what the article says.
+Scripts and raw numbers behind the tables of the first article.
 
 | file | what it does |
 |---|---|
@@ -23,4 +20,4 @@ python figures.py             # ~30 s
 ```
 
 Times vary by tens of percent between runs on a shared machine; graph sizes and
-nonzero counts do not. Nothing here is needed to read the article.
+nonzero counts do not.
