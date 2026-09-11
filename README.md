@@ -6,7 +6,7 @@ and a text, built on CasADi alone.
 
 | post | question |
 |---|---|
-| [01 — A sparse Hessian can still be expensive](01-derivative-cost/README.md) | Where does the work of differentiating a nested dense system actually go, and which part of it is real? |
+| [01 — Exact Hessians of nested dense systems can be expensive](01-derivative-cost/README.md) | Where does the work of differentiating a nested dense system actually go, and which part of it is real? |
 | [02 — Sharing one design block across every condition](02-design-control-coupling/README.md) | What changes when design parameters and trajectory variables share one NLP? |
 
 Both posts use the same small model — a dense matrix built from coordinates that
@@ -27,6 +27,6 @@ and figures.
 
 ```bash
 cd 01-derivative-cost
-python example.py && python scaling.py && python figures.py
+python check_equivalence.py && python example.py && python scaling.py && python figures.py
 cd ../02-design-control-coupling
 python example.py && python figures.py

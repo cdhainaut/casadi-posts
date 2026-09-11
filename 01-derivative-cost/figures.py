@@ -131,26 +131,29 @@ def patterns_figure(data, cases: list[dict]) -> None:
 def scaling_figure() -> None:
     rows = json.loads((HERE / "scaling.json").read_text(encoding="utf-8"))
     sizes = np.array([row["N"] for row in rows], dtype=float)
-    series = (
-        ("gradient", "nodes_gradient", "#2e8b57", "o", "gradient graph"),
-        ("exact Hessian", "nodes_hessian", "#1f4e79", "s", "exact Hessian graph"),
-        ("Hessian, design frozen", "nodes_hessian_frozen", "#8ab6e0", "^",
-         "Hessian graph, design frozen"),
+
+    graphs = (
+        ("gradient", "nodes_gradient", "#2e8b57", "o"),
+        ("Hessian-vector product", "nodes_hessian_vector", "#7fb3d5", "v"),
+        ("exact Hessian", "nodes_hessian", "#1f4e79", "s"),
+        ("exact Hessian, design frozen", "nodes_hessian_frozen", "#b8cfe8", "^"),
+        ("synthetic dense cubic", "nodes_cubic", "0.55", "D"),
     )
     times = (
-        ("gradient", "gradient_ms", "#2e8b57", "o", None),
-        ("exact Hessian", "hessian_ms", "#1f4e79", "s", None),
-        ("Hessian, design frozen", "hessian_frozen_ms", "#8ab6e0", "^", None),
+        ("gradient", "gradient_ms", "#2e8b57", "o"),
+        ("Hessian-vector product", "hessian_vector_ms", "#7fb3d5", "v"),
+        ("exact Hessian", "hessian_ms", "#1f4e79", "s"),
+        ("exact Hessian, design frozen", "hessian_frozen_ms", "#b8cfe8", "^"),
+        ("synthetic dense cubic", "cubic_ms", "0.55", "D"),
+        ("dense constant matrix", "constant_ms", "0.2", "x"),
     )
 
-    fig, axes = plt.subplots(1, 2, figsize=(12.5, 4.8))
+    fig, axes = plt.subplots(1, 2, figsize=(13, 4.9))
     for ax, spec, title, ylabel in (
-        (axes[0], series, "Size of the derivative graph", "nodes in the graph"),
+        (axes[0], graphs, "Size of the derivative graph", "nodes in the graph"),
         (axes[1], times, "Cost of one evaluation", "milliseconds"),
     ):
-        for label, key, color, marker, _ in spec:
-            if key is None:
-                continue
+        for label, key, color, marker in spec:
             values = np.array([row[key] for row in rows], dtype=float)
             ax.loglog(sizes, values, marker=marker, color=color, label=label,
                       linewidth=1.4, markersize=5)
@@ -159,23 +162,24 @@ def scaling_figure() -> None:
         ax.set_ylabel(ylabel, fontsize=9.5)
         ax.grid(which="both", alpha=0.2, linewidth=0.6)
         ax.set_axisbelow(True)
-        ax.legend(fontsize=9, frameon=False)
+        ax.legend(fontsize=8.5, frameon=False, loc="upper left")
 
-    increment = np.array([row["hessian_ms"] / row["hessian_frozen_ms"] for row in rows])
-    axes[1].annotate(
-        f"frozen helps by \u00d7{increment[1]:.1f} at N={int(sizes[1])}\n"
-        f"and by only \u00d7{increment[-1]:.1f} at N={int(sizes[-1])}",
-        xy=(sizes[-1], rows[-1]["hessian_ms"]),
-        xytext=(sizes[0] * 1.15, rows[-1]["hessian_ms"] * 0.35),
-        fontsize=8.5,
-        color="0.3",
+    last = rows[-1]
+    fig.suptitle("Second-order differentiation of the model is the cost, not dense algebra",
+                 fontsize=12.5, y=0.98)
+    fig.text(
+        0.5,
+        0.035,
+        f"At N = {last['N']} the exact Hessian costs "
+        f"{last['hessian_ms'] / last['cubic_ms']:.0f}\u00d7 a synthetic dense cubic of the same "
+        f"shape and {last['hessian_ms'] / last['hessian_vector_ms']:.0f}\u00d7 its own "
+        f"Hessian-vector product. A dense constant matrix of the same shape costs "
+        f"{last['constant_ms']:.2f} ms.",
+        ha="center",
+        fontsize=9,
+        color="0.25",
     )
-    fig.suptitle(
-        "The gradient stays cheap while the exact Hessian leaves it behind",
-        fontsize=12.5,
-        y=0.98,
-    )
-    fig.tight_layout(rect=(0, 0.02, 1, 0.93))
+    fig.tight_layout(rect=(0, 0.08, 1, 0.93))
     fig.savefig(FIGURES / "scaling.png", dpi=170)
     plt.close(fig)
     print("wrote figures/scaling.png")

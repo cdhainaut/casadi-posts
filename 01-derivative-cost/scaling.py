@@ -1,15 +1,14 @@
 """How the derivative cost grows with the size of the dense system.
 
-Same model as example.py, five system sizes, with the kernel written once as a
-matrix expression. For each size:
+Same model as example.py, five system sizes, plus two control objects of the same
+dimension so that a dense algebra cost is not mistaken for a differentiation cost:
 
-    primal     the outputs themselves
-    gradient   first-order derivatives of the summed outputs
-    hessian    exact Lagrangian Hessian of the summed outputs
-    frozen     same Hessian with the design parameters frozen inside the matrix
-
-Reports graph sizes (machine independent) and evaluation times. The interesting
-question is which curve leaves the others behind, and at which size.
+    model          primal, gradient, Hessian-vector product, exact Hessian,
+                   and the same Hessian with the design parameters frozen
+    constant       a dense constant matrix of the same shape: the floor cost of
+                   materialising the output
+    cubic          sum((C x)^3) with C dense and constant: a genuinely dense,
+                   genuinely variable Hessian, with no model structure at all
 
 Writes scaling.json next to this file; figures.py draws it.
 
@@ -31,16 +30,19 @@ EVALUATIONS = 20
 
 design_ref = np.array([0.5, 0.3, 1.0, 0.4])
 state_value = 12.0
+rng = np.random.default_rng(0)
 
-print(f"{'N':>5}{'vars':>6}{'nnz H':>9}{'nodes primal':>14}{'nodes grad':>12}"
-      f"{'nodes H':>10}{'nodes H frozen':>16}{'build H (s)':>13}"
-      f"{'eval H (ms)':>13}{'eval H frozen (ms)':>20}")
+print(f"{'N':>4}{'vars':>6}{'nnz':>7} | {'grad ms':>9}{'H.v ms':>9}{'H ms':>9}"
+      f"{'H frozen ms':>13}{'constant ms':>13}{'cubic ms':>10} |"
+      f"{'nodes grad':>11}{'nodes H':>9}{'nodes Hf':>9}{'nodes cubic':>13}")
 rows = []
 for N in SIZES:
     locator = np.cos(np.pi * (np.arange(N) + 0.5) / N)
     design = cas.MX.sym("design", 4)
     controls = cas.MX.sym("controls", N)
     state = cas.MX.sym("state")
+    variables = cas.vertcat(design, controls, state)
+    nvars = int(variables.size1())
 
     coordinates = (
         locator
@@ -66,17 +68,17 @@ for N in SIZES:
     np.fill_diagonal(kernel_ref, 0.0)
     kernel_ref = cas.DM(kernel_ref)
     weights_ref = cas.DM(WEIGHT * design_ref[2] * (1.0 - 0.4 * design_ref[3] * locator))
-    matrix_ref = cas.MX.eye(N) + cas.diag(OMEGA * weights_ref / state) @ kernel_ref
-    rhs_ref = OMEGA * weights_ref * (controls + 0.1 * locator)
 
-    variables = cas.vertcat(design, controls, state)
     response = cas.solve(matrix, rhs)
     argument = controls + COUPLING * (kernel @ response) / state
     transferred = OMEGA * argument - 5.0 * argument**3
     outputs = cas.vertcat(
         state * cas.sum1(transferred * weights), cas.sum1(argument * weights)
     )
-    response_ref = cas.solve(matrix_ref, rhs_ref)
+    response_ref = cas.solve(
+        cas.MX.eye(N) + cas.diag(OMEGA * weights_ref / state) @ kernel_ref,
+        OMEGA * weights_ref * (controls + 0.1 * locator),
+    )
     argument_ref = controls + COUPLING * (kernel_ref @ response_ref) / state
     transferred_ref = OMEGA * argument_ref - 5.0 * argument_ref**3
     outputs_ref = cas.vertcat(
@@ -84,55 +86,80 @@ for N in SIZES:
         cas.sum1(argument_ref * weights_ref),
     )
 
-    timer = time.perf_counter()
+    objective = cas.sum1(outputs)
+    gradient_expression = cas.gradient(objective, variables)
+    direction = cas.MX.sym("direction", nvars)
+    dense_constant = cas.DM(np.ones((nvars, nvars)))
+    dense_cubic = cas.DM(rng.standard_normal((nvars, nvars)) / np.sqrt(nvars))
+
     prime = cas.Function("outputs_of", [variables], [outputs])
-    gradient = cas.Function("gradient_of", [variables], [cas.gradient(cas.sum1(outputs), variables)])
-    hessian = cas.Function(
-        "hessian_of", [variables], [cas.tril(cas.hessian(cas.sum1(outputs), variables)[0], True)]
+    gradient = cas.Function("gradient_of", [variables], [gradient_expression])
+    hessian_vector = cas.Function(
+        "hv_of", [variables, direction],
+        [cas.jtimes(gradient_expression, variables, direction)],
     )
-    build = time.perf_counter() - timer
+    hessian = cas.Function(
+        "hessian_of", [variables],
+        [cas.tril(cas.hessian(objective, variables)[0], True)],
+    )
     hessian_frozen = cas.Function(
-        "hessian_frozen_of",
-        [variables],
+        "hessian_frozen_of", [variables],
         [cas.tril(cas.hessian(cas.sum1(outputs_ref), variables)[0], True)],
+    )
+    constant = cas.Function(
+        "constant_of", [variables], [cas.tril(dense_constant, True)]
+    )
+    cubic = cas.Function(
+        "cubic_of", [variables],
+        [cas.tril(cas.hessian(cas.sum1((dense_cubic @ variables) ** 3), variables)[0], True)],
     )
 
     point = np.concatenate([design_ref, np.full(N, 0.1), [state_value]])
-    for _ in range(2):
-        prime(point)
-        gradient(point)
-        hessian(point)
-        hessian_frozen(point)
-    timings, timings_gradient, timings_frozen = [], [], []
-    for _ in range(EVALUATIONS):
-        start = time.perf_counter()
-        gradient(point)
-        timings_gradient.append(time.perf_counter() - start)
-        start = time.perf_counter()
-        hessian(point)
-        timings.append(time.perf_counter() - start)
-        start = time.perf_counter()
-        hessian_frozen(point)
-        timings_frozen.append(time.perf_counter() - start)
+    direction_value = rng.standard_normal(nvars)
+    calls = {
+        "gradient": (gradient, (point,)),
+        "hessian_vector": (hessian_vector, (point, direction_value)),
+        "hessian": (hessian, (point,)),
+        "hessian_frozen": (hessian_frozen, (point,)),
+        "constant": (constant, (point,)),
+        "cubic": (cubic, (point,)),
+    }
+    for function, arguments in calls.values():
+        for _ in range(2):
+            function(*arguments)
+    timings = {}
+    for name, (function, arguments) in calls.items():
+        runs = []
+        for _ in range(EVALUATIONS):
+            start = time.perf_counter()
+            function(*arguments)
+            runs.append(time.perf_counter() - start)
+        timings[name] = float(np.median(runs)) * 1e3
 
-    rows.append({
+    row = {
         "N": N,
-        "variables": int(variables.size1()),
+        "variables": nvars,
         "nnz_hessian": int(hessian.nnz_out(0)),
-        "nodes_primal": int(prime.n_nodes()),
         "nodes_gradient": int(gradient.n_nodes()),
+        "nodes_hessian_vector": int(hessian_vector.n_nodes()),
         "nodes_hessian": int(hessian.n_nodes()),
         "nodes_hessian_frozen": int(hessian_frozen.n_nodes()),
-        "build_s": build,
-        "gradient_ms": float(np.median(timings_gradient)) * 1e3,
-        "hessian_ms": float(np.median(timings)) * 1e3,
-        "hessian_frozen_ms": float(np.median(timings_frozen)) * 1e3,
-    })
-    print(f"{N:>5}{variables.size1():>6}{hessian.nnz_out(0):>9}{prime.n_nodes():>14}"
-          f"{gradient.n_nodes():>12}{hessian.n_nodes():>10}"
-          f"{hessian_frozen.n_nodes():>16}{build:>13.2f}"
-          f"{np.median(timings_gradient) * 1e3:>15.3f}"
-          f"{np.median(timings) * 1e3:>13.2f}{np.median(timings_frozen) * 1e3:>20.2f}")
+        "nodes_cubic": int(cubic.n_nodes()),
+        "gradient_ms": timings["gradient"],
+        "hessian_vector_ms": timings["hessian_vector"],
+        "hessian_ms": timings["hessian"],
+        "hessian_frozen_ms": timings["hessian_frozen"],
+        "constant_ms": timings["constant"],
+        "cubic_ms": timings["cubic"],
+    }
+    row["hessian_us_per_nonzero"] = row["hessian_ms"] * 1e3 / row["nnz_hessian"]
+    rows.append(row)
+    print(f"{N:>4}{nvars:>6}{row['nnz_hessian']:>7} | "
+          f"{row['gradient_ms']:>9.3f}{row['hessian_vector_ms']:>9.3f}{row['hessian_ms']:>9.2f}"
+          f"{row['hessian_frozen_ms']:>13.2f}{row['constant_ms']:>13.4f}"
+          f"{row['cubic_ms']:>10.2f} |"
+          f"{row['nodes_gradient']:>11}{row['nodes_hessian']:>9}"
+          f"{row['nodes_hessian_frozen']:>9}{row['nodes_cubic']:>13}")
 
 Path(__file__).with_name("scaling.json").write_text(
     json.dumps(rows, indent=2) + "\n", encoding="utf-8"
