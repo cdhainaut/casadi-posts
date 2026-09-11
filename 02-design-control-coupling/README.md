@@ -47,7 +47,7 @@ structural cost of the first one visible.
 
 ## The example
 
-`example.py` reuses the same anonymous model as the first post — a dense matrix
+`example.py` reuses the same model as the first post — a dense matrix
 built from coordinates that depend on the design parameters, a response, and a
 non-linear output — and repeats it over `K` conditions:
 

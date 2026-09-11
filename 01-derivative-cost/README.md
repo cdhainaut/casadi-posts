@@ -44,7 +44,7 @@ which is what the numbers below show.
 
 ## The example
 
-`example.py` is a self-contained, physics-free version of that structure:
+`example.py` is a self-contained, 180-line version of that structure:
 
 ```python
 coordinates = locator * (1.0 + 0.4 * design[1] * locator) * (0.5 + 0.2 * design[0])

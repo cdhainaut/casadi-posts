@@ -1,17 +1,17 @@
 # CasADi posts
 
 Two short, self-contained notes on the derivative structure of nonlinear programs
-that hide a dense system. No external model, no private code: each post is a flat
-Python script, a figure generator and a text.
+that hide a dense system. Each post is a flat Python script, a figure generator
+and a text, built on CasADi alone.
 
 | post | question |
 |---|---|
 | [01 — A sparse Hessian can still be expensive](01-derivative-cost/README.md) | Where does the work of differentiating a nested dense system actually go? |
 | [02 — Sharing one design block across every condition](02-design-control-coupling/README.md) | What changes when design parameters and trajectory variables share one NLP? |
 
-Both posts use the same anonymous model — a dense matrix built from coordinates
-that depend on design parameters, a response and a non-linear output — so the two
-notes can be read in either order.
+Both posts use the same small model — a dense matrix built from coordinates that
+depend on design parameters, a response and a non-linear output — so the two notes
+can be read in either order.
 
 ## Requirements
 
