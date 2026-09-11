@@ -12,9 +12,9 @@ A(p, v) y = b(p, u, v)
 ```
 
 `A` is dense because it comes from some interaction law — an influence matrix, a
-kernel, an integral operator — and it depends on the design parameters `p`, on the
-controls `u` and on the state `v`. The outputs are then some non-linear function
-of the response `y`.
+kernel, an integral operator — and it depends on the design parameters `p` and on
+the state `v`. The outputs are then some non-linear function of the response `y`,
+and of the controls `u`.
 
 Three things can make the derivatives of such a model expensive, and they are easy
 to confuse:
@@ -107,9 +107,10 @@ expensive", the sweep adds three controls of the same dimension:
 - a **synthetic dense cubic** `sum((C x)^3)` with `C` dense and constant — a
   genuinely dense, genuinely variable Hessian with no model structure in it;
 - the **same model with a constant matrix** — the design still drives the
-  right-hand side and the outputs, but no linear solve has to be differentiated.
+  right-hand side and the outputs, so the solve is still differentiated, but its
+  coefficients no longer depend on the variables.
 
-| `N` | nonzeros | gradient | `H·v` | exact Hessian | design frozen | matrix constant | dense cubic | dense constant |
+| `N` | nonzeros | gradient | `H·v` | exact Hessian | design frozen | coefficients constant | dense cubic | dense constant |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | 12 | 153 | 0.018 ms | 0.035 ms | 0.15 ms | 0.07 ms | 0.07 ms | 0.02 ms | 0.007 ms |
 | 24 | 435 | 0.044 ms | 0.098 ms | 0.83 ms | 0.47 ms | 0.32 ms | 0.04 ms | 0.009 ms |
@@ -136,8 +137,9 @@ Four readings:
 
 The first two lessons said what the cost is *not*; the third control says where it
 is. For a solve `A(x) y = b(x)`, a constant `A` keeps the `A^-1 b_x` part of the
-derivative and removes everything coming from `A_x` and `A_xx`. Those terms are the
-cost.
+derivative and removes everything coming from `A_x` and `A_xx`. Those terms account
+for most of the additional cost in this benchmark — the constant-matrix case still
+costs 118 ms at `N = 192`.
 
 ## Reading the pattern
 
@@ -156,11 +158,13 @@ count what is computed.
   anything that does not depend on the decision variables.
 - **Ask whether you need the full Hessian.** Directional second-order information
   is an order of magnitude cheaper here.
-- **Look at what the matrix depends on, not only at how big it is.** The solve was
-  the whole cost here; freezing the design parameters, which looked like the
-  obvious suspect, changed almost nothing.
+- **Look at what the matrix depends on, not only at how big it is.** Differentiating
+  the dependence of the coefficients was almost the whole cost here; freezing the
+  design parameters, which looked like the obvious suspect, changed almost
+  nothing.
 - **Check before rewriting your solve.** On this structure, elimination, closure
-  constraints and an implicit rootfinder are interchangeable in cost.
+  constraints and an implicit rootfinder differ by a factor of 3.5 — real, but well
+  below the effects of the other lessons.
 
 ## Where this shows up
 

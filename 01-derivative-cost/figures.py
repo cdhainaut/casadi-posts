@@ -137,7 +137,7 @@ def scaling_figure() -> None:
         ("Hessian-vector product", "nodes_hessian_vector", "#7fb3d5", "v"),
         ("exact Hessian", "nodes_hessian", "#1f4e79", "s"),
         ("exact Hessian, design frozen", "nodes_hessian_frozen", "#b8cfe8", "^"),
-        ("exact Hessian, matrix made constant", "nodes_hessian_state_frozen", "#8e44ad", "P"),
+        ("exact Hessian, coefficients constant", "nodes_hessian_state_frozen", "#8e44ad", "P"),
         ("synthetic dense cubic", "nodes_cubic", "0.55", "D"),
     )
     times = (
@@ -145,7 +145,7 @@ def scaling_figure() -> None:
         ("Hessian-vector product", "hessian_vector_ms", "#7fb3d5", "v"),
         ("exact Hessian", "hessian_ms", "#1f4e79", "s"),
         ("exact Hessian, design frozen", "hessian_frozen_ms", "#b8cfe8", "^"),
-        ("exact Hessian, matrix made constant", "hessian_state_frozen_ms", "#8e44ad", "P"),
+        ("exact Hessian, coefficients constant", "hessian_state_frozen_ms", "#8e44ad", "P"),
         ("synthetic dense cubic", "cubic_ms", "0.55", "D"),
         ("dense constant matrix", "constant_ms", "0.2", "x"),
     )
