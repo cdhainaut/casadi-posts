@@ -79,9 +79,9 @@ for N in SIZES:
         cas.MX.eye(N) + cas.diag(OMEGA * weights_ref / state) @ kernel_ref,
         OMEGA * weights_ref * (controls + 0.1 * locator),
     )
-    # Third control: the matrix stops depending on the state as well, so no solve
-    # has to be differentiated any more, while the outputs still depend on the
-    # controls and on the state.
+    # Third control: the coefficient matrix stops depending on the variables, so the
+    # derivative terms coming from the matrix disappear. The solve is still
+    # differentiated, the right-hand side still depends on the controls.
     matrix_constant = cas.DM(
         np.eye(N)
         + np.diag(np.asarray(weights_ref).ravel() * OMEGA / state_value)
