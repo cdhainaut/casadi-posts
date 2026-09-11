@@ -74,7 +74,8 @@ or the wall time of a complete optimisation.
 python example.py     # about a minute
 ```
 
-The script prints the table above and writes `hessian_cost.png`. Everything used to
+The script prints the table above and writes `hessian_cost.png`. Times vary by tens
+of percent between runs on a shared machine; the graph sizes do not. Everything used to
 establish these numbers — the equivalence check between the two kernel writings,
 the sweep from `N = 12` to `192` with its synthetic control objects, the raw JSON
 files — sits in `validation/`, with the same guarantees: nothing in the article is
