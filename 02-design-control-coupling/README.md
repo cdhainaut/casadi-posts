@@ -17,6 +17,34 @@ Writing all of it as a single NLP is the natural thing to do: the optimiser
 explores the design space and the trajectory at the same time. It also changes the
 shape of the derivatives in a way that is easy to miss.
 
+## Where this shows up
+
+This is the standard shape of multidisciplinary optimisation: one set of design
+variables, many conditions, and a model that couples them.
+
+- **Aerospace sizing.** Structural thicknesses shared by several load cases, each
+  with its own aeroelastic state. The all-at-once (SAND) architecture keeps
+  everything in one problem; the multidisciplinary-feasible (MDF) architecture
+  solves each discipline in an inner loop instead.
+- **Power systems.** Equipment ratings (design) with hourly dispatch profiles
+  (controls) for a whole year of representative days.
+- **Robot co-design.** Link lengths and actuator sizes optimised together with
+  the trajectories the robot will execute.
+- **Circuit design.** Component sizes tuned across several operating points —
+  temperature, supply voltage, load — so the design block is shared by every
+  corner.
+- **Process design.** Reactor volume and feed temperatures chosen jointly with
+  the operating profile over a batch.
+- **Building energy.** Equipment sizing plus usage schedules, where the schedule
+  is the controller's decision on top of a fixed design.
+
+The naming is old and stable: optimising analysis variables and design variables
+as one problem is *simultaneous analysis and design* (SAND), the alternative being
+to solve the analysis inside an outer design loop. The first keeps the coupling in
+the KKT matrix; the second keeps the blocks separate but pays for many more
+design iterations. Both are correct — the point of this post is only to make the
+structural cost of the first one visible.
+
 ## The example
 
 `example.py` reuses the same anonymous model as the first post — a dense matrix
@@ -96,3 +124,11 @@ python figures.py     # figures/hessian_patterns.png + figures/cost.png
 
 Times are single-thread medians on a shared workstation and move by about 20 %
 between runs; the graph sizes and the ranking do not.
+
+## References
+
+- Haftka, R. T., "Simultaneous Analysis and Design," *AIAA Journal*, Vol. 23,
+  No. 7, 1985, pp. 1099–1103. [doi:10.2514/3.9043](https://doi.org/10.2514/3.9043)
+- Martins, J. R. R. A., and Lambe, A. B., "Multidisciplinary Design Optimization:
+  A Survey of Architectures," *AIAA Journal*, Vol. 51, No. 9, 2013, pp. 2049–2075.
+  [doi:10.2514/1.J051895](https://doi.org/10.2514/1.J051895)

@@ -19,6 +19,29 @@ When such a model is embedded in a nonlinear program, CasADi has to build the
 derivatives of the outputs with respect to everything. The first instinct is that
 the linear solve must be the expensive part. It is not.
 
+## Where this shows up
+
+The pattern is always the same: a dense system whose entries depend on the
+decision variables, followed by a non-linear reading of its solution.
+
+- **Structural design.** A linear finite-element model `K(p) u = f`, with `p` the
+  thicknesses or sections. Condense or substructure the model and `K` becomes
+  dense; optimising the shape means differentiating `K(p)^-1 f`.
+- **Circuit design.** Modified nodal analysis `G(p) v = i`, with `p` the component
+  sizes, evaluated at several operating points.
+- **Process engineering.** A thermodynamic equilibrium solved by Newton inside an
+  energy balance. The gradient of the process model goes through the solver, not
+  through the balance.
+- **Gaussian-process models.** Fitting a kernel whose length scales are tuned by
+  gradient: the gradient of the likelihood passes through a dense factorisation.
+- **Boundary and panel methods.** A dense influence matrix built from a geometry
+  that itself depends on shape parameters.
+- **Robotics and control.** Kinematic or contact constraints solved at every step
+  of a predictive controller.
+
+In all of them the solve is cheap and the differentiation of the solve is not —
+which is what the numbers below show.
+
 ## The example
 
 `example.py` is a self-contained, physics-free version of that structure:
@@ -115,3 +138,8 @@ python figures.py     # figures/cost.png + figures/patterns.png
 
 Times are single-thread medians on a shared workstation and move by about 20 %
 between runs; the graph sizes and the ranking do not.
+
+## References
+
+- Haftka, R. T., "Simultaneous Analysis and Design," *AIAA Journal*, Vol. 23,
+  No. 7, 1985, pp. 1099–1103. [doi:10.2514/3.9043](https://doi.org/10.2514/3.9043)
