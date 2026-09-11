@@ -137,6 +137,7 @@ def scaling_figure() -> None:
         ("Hessian-vector product", "nodes_hessian_vector", "#7fb3d5", "v"),
         ("exact Hessian", "nodes_hessian", "#1f4e79", "s"),
         ("exact Hessian, design frozen", "nodes_hessian_frozen", "#b8cfe8", "^"),
+        ("exact Hessian, matrix made constant", "nodes_hessian_state_frozen", "#8e44ad", "P"),
         ("synthetic dense cubic", "nodes_cubic", "0.55", "D"),
     )
     times = (
@@ -144,6 +145,7 @@ def scaling_figure() -> None:
         ("Hessian-vector product", "hessian_vector_ms", "#7fb3d5", "v"),
         ("exact Hessian", "hessian_ms", "#1f4e79", "s"),
         ("exact Hessian, design frozen", "hessian_frozen_ms", "#b8cfe8", "^"),
+        ("exact Hessian, matrix made constant", "hessian_state_frozen_ms", "#8e44ad", "P"),
         ("synthetic dense cubic", "cubic_ms", "0.55", "D"),
         ("dense constant matrix", "constant_ms", "0.2", "x"),
     )
@@ -171,10 +173,10 @@ def scaling_figure() -> None:
         0.5,
         0.035,
         f"At N = {last['N']} the exact Hessian costs "
-        f"{last['hessian_ms'] / last['cubic_ms']:.0f}\u00d7 a synthetic dense cubic of the same "
-        f"shape and {last['hessian_ms'] / last['hessian_vector_ms']:.0f}\u00d7 its own "
-        f"Hessian-vector product. A dense constant matrix of the same shape costs "
-        f"{last['constant_ms']:.2f} ms.",
+        f"{last['hessian_ms'] / last['hessian_state_frozen_ms']:.0f}\u00d7 the same model with a "
+        f"constant matrix, {last['hessian_ms'] / last['cubic_ms']:.0f}\u00d7 a synthetic dense "
+        f"cubic of the same shape and {last['hessian_ms'] / last['hessian_vector_ms']:.0f}\u00d7 "
+        f"its own Hessian-vector product.",
         ha="center",
         fontsize=9,
         color="0.25",

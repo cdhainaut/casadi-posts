@@ -14,6 +14,9 @@ This script builds both forms and compares, at several design points:
 Run:  python check_equivalence.py
 """
 
+import json
+from pathlib import Path
+
 import casadi as cas
 import numpy as np
 
@@ -131,6 +134,26 @@ for name in ("scalar", "matrix"):
         function(point)
         runs.append(time.perf_counter() - start)
     print(f"{name:<10}{function.n_nodes():>15}{np.median(runs) * 1e3:>13.2f} ms")
+Path(__file__).with_name("equivalence.json").write_text(
+    json.dumps(
+        {
+            "max_abs_difference": worst,
+            "design_points": [point.tolist() for point in test_points],
+            "nodes": {
+                "kernel_loop": functions["scalar"]["kernel"].n_nodes(),
+                "kernel_matrix": functions["matrix"]["kernel"].n_nodes(),
+                "hessian_loop": functions["scalar"]["hessian"].n_nodes(),
+                "hessian_matrix": functions["matrix"]["hessian"].n_nodes(),
+            },
+            "tolerance": TOLERANCE,
+        },
+        indent=2,
+    )
+    + "\n",
+    encoding="utf-8",
+)
+print("\nwrote equivalence.json")
+
 if max(worst.values()) < TOLERANCE:
     print("the two writings are the same object")
 else:

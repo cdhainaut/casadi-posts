@@ -69,7 +69,7 @@ are not:
 
 Measured by `check_equivalence.py`, which also verifies that the two writings
 agree to `7e-15` on the Hessian, `4e-15` on the gradient and `1e-17` on the
-kernel itself, over four design points.
+kernel itself, over four design points; the script writes `equivalence.json`.
 
 With `MX`, a matrix operation stays one node; a Python loop with scalar
 assignments creates one node per entry. This is pure representation: fixing it
@@ -100,38 +100,41 @@ is a lever on the order of magnitude we saw above.
 The obvious objection is that the Hessian is dense, so of course it gets
 expensive: at `N = 192` it has 19 503 nonzeros, exactly the full triangle. To
 separate "a dense object is expensive" from "differentiating this model is
-expensive", the sweep below adds two control objects of the same dimension:
+expensive", the sweep adds three controls of the same dimension:
 
 - a **dense constant matrix**, the floor cost of materialising that many numbers;
 - a **synthetic dense cubic** `sum((C x)^3)` with `C` dense and constant — a
-  genuinely dense, genuinely variable Hessian with no model structure in it.
+  genuinely dense, genuinely variable Hessian with no model structure in it;
+- the **same model with a constant matrix** — the design still drives the
+  right-hand side and the outputs, but no linear solve has to be differentiated.
 
-| `N` | nonzeros | gradient | `H·v` | exact Hessian | design frozen | dense cubic | dense constant |
-|---:|---:|---:|---:|---:|---:|---:|---:|
-| 12 | 153 | 0.02 ms | 0.05 ms | 0.22 ms | 0.09 ms | 0.02 ms | 0.011 ms |
-| 24 | 435 | 0.06 ms | 0.13 ms | 0.95 ms | 0.57 ms | 0.07 ms | 0.013 ms |
-| 48 | 1 431 | 0.37 ms | 0.86 ms | 10.8 ms | 7.7 ms | 0.20 ms | 0.014 ms |
-| 96 | 5 151 | 2.3 ms | 5.1 ms | 136 ms | 122 ms | 1.6 ms | 0.024 ms |
-| 192 | 19 503 | 16 ms | 38 ms | **1 502 ms** | 1 313 ms | 7.7 ms | 0.032 ms |
+| `N` | nonzeros | gradient | `H·v` | exact Hessian | design frozen | matrix constant | dense cubic | dense constant |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 12 | 153 | 0.018 ms | 0.035 ms | 0.15 ms | 0.07 ms | 0.07 ms | 0.02 ms | 0.007 ms |
+| 24 | 435 | 0.044 ms | 0.098 ms | 0.83 ms | 0.47 ms | 0.32 ms | 0.04 ms | 0.009 ms |
+| 48 | 1 431 | 0.22 ms | 0.58 ms | 8.2 ms | 5.8 ms | 2.4 ms | 0.20 ms | 0.016 ms |
+| 96 | 5 151 | 1.7 ms | 4.0 ms | 94 ms | 78 ms | 15 ms | 1.0 ms | 0.019 ms |
+| 192 | 19 503 | 14 ms | 34 ms | **1 529 ms** | 1 332 ms | **118 ms** | 9.3 ms | 0.029 ms |
 
-Three readings:
+Four readings:
 
 1. **It is not the size of the object.** Materialising a dense matrix of the same
-   shape costs 0.03 ms at `N = 192` — five orders of magnitude below the model.
+   shape costs 0.03 ms at `N = 192` — four to five orders of magnitude below the
+   model.
 2. **It is not dense algebra in general.** The synthetic cubic has a dense,
-   variable Hessian of the same shape and costs 7.7 ms, 195 times less. The
-   expensive part is specific to the model: differentiating the dense solve and
-   the matrix products around it.
-3. **Materialising the full second-order object has its own price.** The
-   Hessian-vector product is 39 times cheaper than the complete Hessian at the
+   variable Hessian of the same shape and costs 9.3 ms, 164 times less.
+3. **It is not the design dependence.** Freezing the design parameters inside the
+   matrix buys only 13 % at `N = 192`. What costs is differentiating the solve
+   itself: with a constant matrix the same model drops from 1 529 ms to 118 ms,
+   a factor of 13.
+4. **Materialising the full second-order object has its own price.** The
+   Hessian-vector product is 44 times cheaper than the complete Hessian at the
    same size. If a solver only needs directional second-order information, the
    full matrix is not the thing to build.
 
-One observation the numbers force, and which deserves stating rather than
-explaining away: freezing the design parameters cuts the graph by a factor of 5.6
-at `N = 192` but the evaluation time by only 14 %. The two graphs share the part
-that dominates — differentiating the dense solve, which still depends on the
-state. Design dependence is no longer the driver at this size; the operator is.
+The first two lessons said what the cost is *not*; the third control says where it
+is: in the second-order differentiation of a dense solve whose matrix depends on
+the variables, whether they are design parameters, controls or state.
 
 ## Reading the pattern
 
@@ -149,7 +152,10 @@ count what is computed.
 - **Freeze what is genuinely constant.** NumPy values, not symbolic loops, for
   anything that does not depend on the decision variables.
 - **Ask whether you need the full Hessian.** Directional second-order information
-  is an order of magnitude cheaper here; quasi-Newton updates are cheaper still.
+  is an order of magnitude cheaper here.
+- **Look at what the matrix depends on, not only at how big it is.** The solve was
+  the whole cost here; freezing the design parameters, which looked like the
+  obvious suspect, changed almost nothing.
 - **Check before rewriting your solve.** On this structure, elimination, closure
   constraints and an implicit rootfinder are interchangeable in cost.
 
@@ -179,7 +185,9 @@ Everything above measures a model in isolation: derivatives of its outputs, not 
 solved NLP. Nothing here says how these costs translate into IPOPT iterations, a
 KKT factorisation, or the wall time of a complete optimisation. The claim is
 narrower: for this structure, the derivative cost lives in the second-order
-differentiation of the model, and not in the dense object's size or its algebra.
+differentiation of the dense solve inside the model, not in the size of the dense
+object, not in its algebra, and not in which variables its matrix happens to
+depend on.
 
 ## Reproduce
 
@@ -190,8 +198,9 @@ python scaling.py             # N = 12 to 192, with controls -> scaling.json
 python figures.py             # figures/cost.png, patterns.png, scaling.png
 ```
 
-Times are single-thread medians on a shared workstation and move by about 20 %
-between runs; the graph sizes do not.
+Times are single-thread medians on a shared workstation. They move by tens of
+percent between runs, up to about 40 % on the slowest curve; the graph sizes and
+the nonzeros do not. Compare a fresh run to `scaling.json` with that in mind.
 
 ## References
 

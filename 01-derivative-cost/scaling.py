@@ -33,7 +33,7 @@ state_value = 12.0
 rng = np.random.default_rng(0)
 
 print(f"{'N':>4}{'vars':>6}{'nnz':>7} | {'grad ms':>9}{'H.v ms':>9}{'H ms':>9}"
-      f"{'H frozen ms':>13}{'constant ms':>13}{'cubic ms':>10} |"
+      f"{'H frozen ms':>13}{'H state-frozen ms':>17}{'constant ms':>13}{'cubic ms':>10} |"
       f"{'nodes grad':>11}{'nodes H':>9}{'nodes Hf':>9}{'nodes cubic':>13}")
 rows = []
 for N in SIZES:
@@ -79,6 +79,15 @@ for N in SIZES:
         cas.MX.eye(N) + cas.diag(OMEGA * weights_ref / state) @ kernel_ref,
         OMEGA * weights_ref * (controls + 0.1 * locator),
     )
+    # Third control: the matrix stops depending on the state as well, so no solve
+    # has to be differentiated any more, while the outputs still depend on the
+    # controls and on the state.
+    matrix_constant = cas.DM(
+        np.eye(N)
+        + np.diag(np.asarray(weights_ref).ravel() * OMEGA / state_value)
+        @ np.asarray(kernel_ref)
+    )
+    response_state_frozen = cas.solve(matrix_constant, rhs)
     argument_ref = controls + COUPLING * (kernel_ref @ response_ref) / state
     transferred_ref = OMEGA * argument_ref - 5.0 * argument_ref**3
     outputs_ref = cas.vertcat(
@@ -106,6 +115,16 @@ for N in SIZES:
         "hessian_frozen_of", [variables],
         [cas.tril(cas.hessian(cas.sum1(outputs_ref), variables)[0], True)],
     )
+    argument_state_frozen = controls + COUPLING * (kernel @ response_state_frozen) / state
+    transferred_state_frozen = OMEGA * argument_state_frozen - 5.0 * argument_state_frozen**3
+    outputs_state_frozen = cas.vertcat(
+        state * cas.sum1(transferred_state_frozen * weights),
+        cas.sum1(argument_state_frozen * weights),
+    )
+    hessian_state_frozen = cas.Function(
+        "hessian_state_frozen_of", [variables],
+        [cas.tril(cas.hessian(cas.sum1(outputs_state_frozen), variables)[0], True)],
+    )
     constant = cas.Function(
         "constant_of", [variables], [cas.tril(dense_constant, True)]
     )
@@ -121,6 +140,7 @@ for N in SIZES:
         "hessian_vector": (hessian_vector, (point, direction_value)),
         "hessian": (hessian, (point,)),
         "hessian_frozen": (hessian_frozen, (point,)),
+        "hessian_state_frozen": (hessian_state_frozen, (point,)),
         "constant": (constant, (point,)),
         "cubic": (cubic, (point,)),
     }
@@ -144,11 +164,13 @@ for N in SIZES:
         "nodes_hessian_vector": int(hessian_vector.n_nodes()),
         "nodes_hessian": int(hessian.n_nodes()),
         "nodes_hessian_frozen": int(hessian_frozen.n_nodes()),
+        "nodes_hessian_state_frozen": int(hessian_state_frozen.n_nodes()),
         "nodes_cubic": int(cubic.n_nodes()),
         "gradient_ms": timings["gradient"],
         "hessian_vector_ms": timings["hessian_vector"],
         "hessian_ms": timings["hessian"],
         "hessian_frozen_ms": timings["hessian_frozen"],
+        "hessian_state_frozen_ms": timings["hessian_state_frozen"],
         "constant_ms": timings["constant"],
         "cubic_ms": timings["cubic"],
     }
@@ -156,8 +178,8 @@ for N in SIZES:
     rows.append(row)
     print(f"{N:>4}{nvars:>6}{row['nnz_hessian']:>7} | "
           f"{row['gradient_ms']:>9.3f}{row['hessian_vector_ms']:>9.3f}{row['hessian_ms']:>9.2f}"
-          f"{row['hessian_frozen_ms']:>13.2f}{row['constant_ms']:>13.4f}"
-          f"{row['cubic_ms']:>10.2f} |"
+          f"{row['hessian_frozen_ms']:>13.2f}{row['hessian_state_frozen_ms']:>17.2f}"
+          f"{row['constant_ms']:>13.4f}{row['cubic_ms']:>10.2f} |"
           f"{row['nodes_gradient']:>11}{row['nodes_hessian']:>9}"
           f"{row['nodes_hessian_frozen']:>9}{row['nodes_cubic']:>13}")
 
