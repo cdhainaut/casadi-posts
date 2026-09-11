@@ -1,0 +1,35 @@
+[
+  {
+    "label": "design per condition",
+    "variables": 63,
+    "constraints": 3,
+    "nnz_jacobian": 63,
+    "nnz_hessian": 693,
+    "nodes_jacobian": 17020,
+    "nodes_hessian": 234867,
+    "build_s": 0.29597806299716467,
+    "hessian_ms": 11.920324497623369
+  },
+  {
+    "label": "design shared",
+    "variables": 55,
+    "constraints": 3,
+    "nnz_jacobian": 63,
+    "nnz_hessian": 673,
+    "nodes_jacobian": 17028,
+    "nodes_hessian": 234857,
+    "build_s": 0.3526601999983541,
+    "hessian_ms": 12.213283498567762
+  },
+  {
+    "label": "design frozen",
+    "variables": 55,
+    "constraints": 3,
+    "nnz_jacobian": 51,
+    "nnz_hessian": 459,
+    "nodes_jacobian": 1699,
+    "nodes_hessian": 3907,
+    "build_s": 0.10795271999813849,
+    "hessian_ms": 0.3938395020668395
+  }
+]
