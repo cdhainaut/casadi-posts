@@ -2,7 +2,7 @@
 
 | post | one line |
 |---|---|
-| [A dense solve is cheap to evaluate and expensive to differentiate](01-derivative-cost/README.md) | a dense `A(x) y = b(x)` costs little to evaluate and a lot to differentiate twice, and the cost is the dependence of `A` on `x` |
+| [When a dense solve becomes expensive to differentiate](01-derivative-cost/README.md) | a dense `A(x) y = b(x)` costs little to evaluate and a lot to differentiate twice, and the cost is the dependence of `A` on `x` |
 | [Sharing a few design parameters across many conditions makes a star](02-design-control-coupling/README.md) | one shared design block connects every condition to every other one, and the Hessian shows it |
 
 Both use the same small model — a dense matrix built from coordinates that depend

@@ -1,4 +1,4 @@
-# A dense solve is cheap to evaluate and expensive to differentiate
+# When a dense solve becomes expensive to differentiate
 
 Many models hide a small dense linear system:
 
@@ -7,8 +7,8 @@ A(x) y = b(x)
 ```
 
 `A` is dense because it comes from some interaction law — an influence matrix, a
-kernel, an integral operator — and it depends on the variables `x` of the
-optimisation: design parameters, controls, state. The outputs are then a
+kernel, an integral operator — and it depends on some of the optimisation
+variables: here the design parameters and the state. The outputs are then a
 non-linear reading of the response `y`.
 
 Evaluating all of that is cheap. Differentiating it twice is not, and the cost is

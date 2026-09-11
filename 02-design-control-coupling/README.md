@@ -36,10 +36,10 @@ block and the matrix stays block-structured.
 - **The coupling is structural, not numerical.** Both layouts cost the same to
   differentiate. What changes is the connectivity: every condition is connected to
   every other one through the shared block.
-- **Connectivity is what a sparse factorisation pays for.** A pattern with four
-  wide columns does not factor like a block-diagonal one, even at equal nonzero
-  count. This script does not measure that factorisation — it shows the structure
-  that produces it.
+- **Connectivity is what will matter to a sparse factorisation.** A pattern with
+  four wide columns does not factor like a block-diagonal one, even at equal
+  nonzero count. This script does not measure that factorisation — it shows the
+  structure that feeds it.
 - **Order the variables deliberately.** With the design block first or last, the
   pattern stays as close to block-arrow as it can be.
 
