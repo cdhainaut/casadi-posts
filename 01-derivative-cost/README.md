@@ -42,24 +42,16 @@ kernel = ((coordinates[1] - coordinates[0]) / (4.0 * np.pi)) / difference
 kernel = kernel - cas.diag(cas.diag(kernel))
 ```
 
-The kernel is a rational function of coordinates that depend on the design
-parameters, the response feeds an argument `a = u + c (K y) / v`, and the outputs
-pass through a non-linearity `g(a) = ω a − 5 a³`.
+The coordinates depend non-linearly on the design parameters, the response comes
+from a dense linear system, and the outputs are a non-linear function of the
+response and of the controls. The constants are deliberately arbitrary: what
+matters here is the structure of the model, not its values.
 
 ## Lesson 1: a matrix expression is not a scalar loop
 
-The same kernel can be assembled entry by entry:
-
-```python
-kernel = cas.MX.zeros(N, N)
-for i in range(N):
-    for j in range(N):
-        if i != j:
-            kernel[i, j] = (x[1] - x[0]) / (4.0 * np.pi * (x[i] - x[j]))
-```
-
-The numbers are identical to the matrix form (agreement to `1e-17`), the graphs
-are not:
+The same kernel can be built one element at a time, with one assignment per entry
+of the matrix. The numbers come out identical — agreement to `1e-17` — the graphs
+do not:
 
 | at `N = 24` | scalar loop | matrix expression |
 |---|---:|---:|
@@ -67,9 +59,9 @@ are not:
 | nodes for the Hessian | 226 881 | **3 947** |
 | one Hessian evaluation | 11.9 ms | **0.8 ms** |
 
-Measured by `check_equivalence.py`, which also verifies that the two writings
-agree to `7e-15` on the Hessian, `4e-15` on the gradient and `1e-17` on the
-kernel itself, over four design points; the script writes `equivalence.json`.
+`check_equivalence.py` verifies that the element-by-element build and the matrix
+expression agree to `7e-15` on the Hessian, `4e-15` on the gradient and `1e-17` on
+the kernel itself, over four design points, and writes `equivalence.json`.
 
 With `MX`, a matrix operation stays one node; a Python loop with scalar
 assignments creates one node per entry. This is pure representation: fixing it
