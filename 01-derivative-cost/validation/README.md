@@ -8,6 +8,7 @@ them, and the checks that they mean what the article says.
 | file | what it does |
 |---|---|
 | `check_equivalence.py` | builds the dense kernel two ways and compares values, gradient and Hessian over four design points |
+| `writings.py` | the same solve written five ways — elimination, closure constraints, implicit rootfinder, frozen design, linear output — with their graph sizes and evaluation times |
 | `scaling.py` | sweeps the system size from `N = 12` to `192` with three control objects and writes `scaling.json` |
 | `figures.py` | draws the cost and pattern figures from the JSON files |
 | `results.json`, `scaling.json`, `equivalence.json` | raw numbers |
@@ -16,6 +17,7 @@ them, and the checks that they mean what the article says.
 
 ```bash
 python check_equivalence.py   # ~10 s
+python writings.py            # ~10 s
 python scaling.py             # ~5 min
 python figures.py             # ~30 s
 ```

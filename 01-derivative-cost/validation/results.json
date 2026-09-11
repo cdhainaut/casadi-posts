@@ -7,8 +7,8 @@
     "nodes_gradient": 189,
     "nodes_jacobian": 389,
     "nodes_hessian": 3947,
-    "build_s": 0.007730197990895249,
-    "hessian_ms": 0.7632950000697747
+    "build_s": 0.02014715998666361,
+    "hessian_ms": 1.5451790022780187
   },
   {
     "label": "elimination, A design-frozen",
@@ -18,8 +18,8 @@
     "nodes_gradient": 78,
     "nodes_jacobian": 196,
     "nodes_hessian": 1431,
-    "build_s": 0.003683354996610433,
-    "hessian_ms": 0.4186075020697899
+    "build_s": 0.0077263529965421185,
+    "hessian_ms": 0.8996579999802634
   },
   {
     "label": "elimination, g linear",
@@ -29,8 +29,8 @@
     "nodes_gradient": 179,
     "nodes_jacobian": 379,
     "nodes_hessian": 868,
-    "build_s": 0.0028592140006367117,
-    "hessian_ms": 0.1864279984147288
+    "build_s": 0.00618910399498418,
+    "hessian_ms": 0.4127609936404042
   },
   {
     "label": "SAND (closure constraints)",
@@ -40,8 +40,8 @@
     "nodes_gradient": 152,
     "nodes_jacobian": 423,
     "nodes_hessian": 3356,
-    "build_s": 0.007763871006318368,
-    "hessian_ms": 0.4861054985667579
+    "build_s": 0.017279592007980682,
+    "hessian_ms": 1.171677497040946
   },
   {
     "label": "rootfinder (implicit)",
@@ -51,7 +51,7 @@
     "nodes_gradient": 159,
     "nodes_jacobian": 341,
     "nodes_hessian": 3212,
-    "build_s": 0.021476217996678315,
-    "hessian_ms": 1.718735002214089
+    "build_s": 0.0471679479960585,
+    "hessian_ms": 4.428366002684925
   }
 ]
