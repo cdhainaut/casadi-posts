@@ -1,8 +1,8 @@
 # CasADi posts
 
 Two short, self-contained notes on the derivative structure of nonlinear programs
-that hide a dense system. Each post is a flat Python script, a figure generator
-and a text, built on CasADi alone.
+that hide a dense system. Each post is a handful of flat Python scripts, a figure
+generator and a text, built on CasADi, NumPy and Matplotlib only.
 
 | post | question |
 |---|---|
@@ -22,8 +22,8 @@ numpy
 matplotlib
 ```
 
-Each post runs in a few seconds and writes its own `results.json`, `patterns.npz`
-and figures.
+Each script writes its own JSON next to itself, so every number quoted in the two
+texts can be traced back to a file in the repository.
 
 ```bash
 cd 01-derivative-cost
