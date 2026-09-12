@@ -60,7 +60,7 @@ or the wall time of a complete optimisation.
 ```bash
 python example.py                              # about a minute
 cd validation
-python check_equivalence.py                    # the two kernel writings agree
+python check_equivalence.py                    # the dense kernel and its derivatives
 python writings.py                             # the same solve, five ways
 python scaling.py                              # N = 12 to 192, with control objects
 ```
