@@ -33,9 +33,10 @@ block and the matrix stays block-structured.
 
 ## What it means
 
-- **The coupling is structural, not numerical.** Both layouts cost the same to
-  differentiate. What changes is the connectivity: every condition is connected to
-  every other one through the shared block.
+- **The coupling is structural, not numerical.** Both layouts produce almost the
+  same derivative graph size — 13 058 against 13 112 nodes. What changes is the
+  connectivity: every condition is connected to every other one through the shared
+  block.
 - **Connectivity is what will matter to a sparse factorisation.** A pattern with
   four wide columns does not factor like a block-diagonal one, even at equal
   nonzero count. This script does not measure that factorisation — it shows the

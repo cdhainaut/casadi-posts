@@ -89,6 +89,7 @@ objective_ref = cas.sum1(outputs_ref)
 
 # ------------------------------------------------------------------ derivatives
 direction = cas.MX.sym("direction", variables.size1())
+evaluation = cas.Function("outputs_of", [variables], [outputs])
 gradient = cas.Function(
     "gradient_of", [variables], [cas.gradient(objective, variables)]
 )
@@ -112,6 +113,7 @@ hessian_ref = cas.Function(
 point = np.concatenate([design_value, np.full(N, 0.1), [state_value]])
 direction_value = np.random.default_rng(0).standard_normal(variables.size1())
 calls = {
+    "model evaluation": (evaluation, (point,)),
     "gradient": (gradient, (point,)),
     "Hessian-vector product": (hessian_vector, (point, direction_value)),
     "exact Hessian": (hessian, (point,)),
@@ -135,14 +137,15 @@ for name, (function, arguments) in calls.items():
 
 print(
     f"\nAt N = {N}, the exact Hessian costs "
-    f"{results[2][2] / results[3][2]:.1f}x the same model with constant coefficients, "
-    f"and {results[2][2] / results[1][2]:.1f}x its own Hessian-vector product."
+    f"{results[3][2] / results[4][2]:.1f}x the same model with constant coefficients, "
+    f"{results[3][2] / results[0][2]:.0f}x a plain evaluation, and "
+    f"{results[3][2] / results[2][2]:.1f}x its own Hessian-vector product."
 )
 
 # ---------------------------------------------------------------------- figure
 names = [row[0] for row in results]
 times = [row[2] for row in results]
-colors = ["#2e8b57", "#7fb3d5", "#1f4e79", "#8e44ad"]
+colors = ["#4d4d4d", "#2e8b57", "#7fb3d5", "#1f4e79", "#8e44ad"]
 figure, axis = plt.subplots(figsize=(8.5, 3.6))
 axis.barh(np.arange(len(names))[::-1], times, color=colors, height=0.55)
 axis.set_xscale("log")
