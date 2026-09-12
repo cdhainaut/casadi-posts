@@ -49,19 +49,6 @@ solver, a directional product is forty times cheaper than the matrix. And if you
 can make part of the matrix independent of the variables — a frozen geometry, a
 precomputed table — do it before looking for a solver trick.
 
-## A CasADi gotcha, in passing
-
-The same dense kernel can be written as a matrix expression, or assembled element
-by element in a Python loop. The numbers are identical to `1e-17`; the graphs are
-not. At `N = 24`, the element-by-element version produces 5 538 nodes for the
-kernel against 32, and 226 881 nodes for the Hessian against 3 947 — with an
-evaluation time a factor of fifteen higher.
-
-With `MX`, a matrix operation stays one node; a loop with scalar assignments
-creates one node per entry. It costs nothing to write it the matrix way, and it is
-worth checking before blaming the solver for your graph size. The check is in
-`validation/check_equivalence.py`.
-
 ## Scope
 
 This measures a model in isolation: derivatives of its outputs, not a solved NLP.
