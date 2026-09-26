@@ -2,5 +2,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
-review_request_casadi_posts.md
-review_response_casadi_posts.md
+# Local correspondence and original received archives (not part of the shared notes).
+/notes/local/
+# New benchmark runs must not overwrite the published reference measurements.
+/03-control-rank/runs/

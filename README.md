@@ -1,45 +1,61 @@
-# Two candidate CasADi blog posts
+# CasADi — derivative cost, shared design and sparse operators
 
-| post | one line |
-|---|---|
-| [When a dense solve becomes expensive to differentiate](01-derivative-cost/README.md) | a dense `A(x) y = b(x)` costs little to evaluate and a lot to differentiate twice, and the cost is the dependence of `A` on `x` |
-| [Sharing a few design parameters across many conditions makes a star](02-design-control-coupling/README.md) | one shared design block connects every condition to every other one, and the Hessian shows it |
+Small, reproducible experiments on exact derivatives and nonlinear optimisation.
+The first two notes study a dense influence model. The third follows Joris Gillis's
+sparse-operator example and varies the number of independent controls.
 
-Both use the same small model — a dense matrix built from coordinates that depend
-on design parameters, a response, and a non-linear output — so the two notes can
-be read in either order.
+**For the current discussion, start with [03-control-rank](03-control-rank/README.md)**
+and its [questions for Joris](03-control-rank/DISCUSSION.md).
 
-## Contents
+| Study | Question | Scope |
+|---|---|---|
+| [01 — Derivative cost](01-derivative-cost/README.md) | Why can a cheap dense solve be expensive to differentiate twice? | Model and derivative evaluation, not a complete NLP solve |
+| [02 — Shared design](02-design-control-coupling/README.md) | How does a shared design block connect otherwise separate conditions? | Derivative structure, not measured KKT factorisation |
+| [03 — Control rank](03-control-rank/README.md) | How much does lifting help when many local controls become a few global ones? | Four equivalent NLP formulations; 16 converged J0/J1 cases |
 
+The first two notes are unchanged. Study 03 uses an exponential kernel whose
+sparse inverse is known exactly; it is not a claim of equivalence to the kernel
+of study 01. Its gain must not be extrapolated to larger auxiliary fields or
+multiple scenarios without further measurements.
+
+## Repository map
+
+```text
+01-derivative-cost/          first article, example and validation data
+02-design-control-coupling/  second article, example and validation data
+03-control-rank/
+    README.md               equations, results, limitations and reproduction
+    DISCUSSION.md           concise questions for Joris
+    bench_joris_controls.py  one standalone benchmark case
+    run_joris_controls.py    isolated J0/J1 campaign; stop at the first failure
+    reference/              original source, results and note received from Joris
+    validation/             published numerical records and provenance
+    tests/                  algebra, derivative, CLI and provenance checks
+notes/                      historical local working files, kept out of Git
 ```
-01-derivative-cost/
-    README.md             the article
-    example.py            the model, measured at N = 192
-    hessian_cost.png      its figure
-    validation/           derivation checks, the size sweep, raw numbers
 
-02-design-control-coupling/
-    README.md             the article
-    example.py            the same problem with K = 5 conditions
-    hessian_structure.png its figure
-    validation/           the layouts measured, raw numbers
-```
+## Requirements and execution
 
-## Requirements
-
-```
-python >= 3.11
-casadi >= 3.7
-numpy
-matplotlib
-```
-
-## Run
+Studies 01/02 use Python ≥ 3.11, CasADi ≥ 3.7, NumPy and Matplotlib:
 
 ```bash
-cd 01-derivative-cost && python example.py
-cd 02-design-control-coupling && python example.py
+(cd 01-derivative-cost && python example.py)
+(cd 02-design-control-coupling && python example.py)
 ```
 
-Each script prints its table and writes its figure. The scripts in `validation/`
-reproduce the numbers quoted in the two articles.
+Study 03 needs only NumPy and CasADi with IPOPT/MUMPS; its measured versions are
+pinned in `03-control-rank/requirements.txt`. It has no dependency on a domain
+model, another checkout or a private data directory. See its
+[reproduction instructions](03-control-rank/README.md#5-reproduire-depuis-ce-dépôt)
+for the Linux resource envelope and fresh output directory.
+
+Published measurements are kept separate from new runs. The 03 campaign never
+overwrites an existing output directory; new `03-control-rank/runs/` directories
+are ignored by Git. No benchmark is launched merely by importing its modules.
+
+## Attribution
+
+Study 03 is based on **Joris Gillis's “Lifting the operator, not the solve”**.
+The received reference files are preserved unchanged and attributed in
+[reference/README.md](03-control-rank/reference/README.md). The adaptations,
+measurement conventions and open questions are identified separately.

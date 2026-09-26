@@ -1,0 +1,3 @@
+# Versions used for the published measurements; Python 3.11.15.
+casadi==3.7.2
+numpy==2.4.6

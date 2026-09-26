@@ -1,0 +1,34 @@
+{
+  "source_archive_id": "joris_controls_j0_j1_20260926T092000Z",
+  "source_campaign_sha256": "0059f9f10923f9be7f9efe5725e0288fe4f465c01ab9483f9aee4d4405c40167",
+  "export": "Original metadata and numerical result objects; machine-specific commands and child return codes omitted. No new benchmark run.",
+  "portable_code_changes": "Benchmark module docstring link only; campaign runner unchanged. Test imports and paths adapted to this repository.",
+  "solver_versions_from_logs": {
+    "ipopt": "3.14.11",
+    "mumps": "5.4.1"
+  },
+  "source_files_sha256": {
+    "bench_joris_controls.py": "a476fdfb2bbc9c9af23aee0e2281b16d4d509e9837309a637c2001ea4f24b653",
+    "run_joris_controls.py": "29d4839e4e386095c2575a111f1cae48524adeb71178b4d309d71b682164d6c7",
+    "joris_original.py": "199476df53495d264ef6d3f535825a8b61963ce7b2da9321a9e52125edbada04",
+    "joris_original_results.json": "d4646f827761eb5700dc51c2cd75c825f7ce06eb5925da7c5d2e48fd455ef4cb"
+  },
+  "source_cases_sha256": {
+    "J0_n192_r192_dense_eliminated": "36a3f6458e99d06632d0d5e84e016d54365e5ad460915e6ee42809344a9f8ccd",
+    "J0_n192_r192_dense_lifted": "9a25ada8b1822928cc7277cfa0e45e1489a1db1ab55eaf94c1c763f73b1873f3",
+    "J0_n192_r192_sparse_eliminated": "d01d8abf817572b32d09d8ea1a90d34362605ae2e2ab46e225573cbff696f87a",
+    "J0_n192_r192_sparse_lifted": "a253da18fd1120f8568d1ab37dd29b46f53d6da2ce0c1a6f48cd8656724ae647",
+    "J1_n42_r42_dense_eliminated": "4bbf6b513ed6456e356368a79796ed02e8e0a0999c048785ecd857ac4cc0a5b7",
+    "J1_n42_r42_dense_lifted": "b78293eff19e889be15853461a7e0671d46ae59d2f00214e61d865cd9c5dee78",
+    "J1_n42_r42_sparse_eliminated": "8590f8d823324ded1fa3bbdc7010ced7f60505834b4b9058e6e8cadaa5868c90",
+    "J1_n42_r42_sparse_lifted": "b5d585ffc10fcf4058dc1779cf2d45e16dbbc057157cf4488aa414a07bcf0ce7",
+    "J1_n42_r4_dense_eliminated": "84b995fca7658c65953fa823043f908f452ec841ed421a7868e54a08d92a84d6",
+    "J1_n42_r4_dense_lifted": "09e01f52849dc9bfcc9093dfd364ea183c295fa1e327fbb8b0c78ff43c424eb3",
+    "J1_n42_r4_sparse_eliminated": "fdccff8af58e0816ab0d8b7b0f811931c9fdee672fe9ec6684aebf25b7e2bc75",
+    "J1_n42_r4_sparse_lifted": "f64c1d62a985fcdc0665a1ef0c63451b0ec0e4a721e060fb8d5fdcd79c59a095",
+    "J1_n42_r1_dense_eliminated": "fb63f7dfd948d8eeceb32dd8eca67f9a2885a96e3c0bf90c65f1b59d21116a22",
+    "J1_n42_r1_dense_lifted": "177085a57e6f8287f3798764b48a1ec36cbc5e3da51e709a6303b4a011c9f8f8",
+    "J1_n42_r1_sparse_eliminated": "71fd1a13885428c938555379ddfc844673624757a5be80ddebfe40f6c7b77f4d",
+    "J1_n42_r1_sparse_lifted": "317d8a4df7383ba276fd8a77d2efa8a4d20b3a271ee21c81e5116946e5cc82de"
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "dense, eliminated": {
+    "kernel": "dense",
+    "lifted": false,
+    "hessian": "exact",
+    "status": "Solve_Succeeded",
+    "variables": 197,
+    "constraints": 197,
+    "jac_nnz": 197,
+    "iterations": 20,
+    "objective": -4213.93302772606,
+    "design": [
+      0.5988417967109598,
+      0.64262822798449,
+      1.0000000099962625,
+      0.5732143647029253
+    ],
+    "state": 20.000000199924354,
+    "wall_s": 99.8403508070005,
+    "t_hess_s": 94.908859458,
+    "hessian_calls": 20,
+    "t_jac_g_s": 0.000378192,
+    "t_grad_s": 1.3318792770000005,
+    "hessian_nnz": 19503,
+    "hessian_nodes": 22332
+  },
+  "dense, lifted": {
+    "kernel": "dense",
+    "lifted": true,
+    "hessian": "exact",
+    "status": "Solve_Succeeded",
+    "variables": 389,
+    "constraints": 389,
+    "jac_nnz": 38213,
+    "iterations": 20,
+    "objective": -4213.933027727118,
+    "design": [
+      0.5976666655601829,
+      0.6421209864284407,
+      1.0000000099963882,
+      0.619760950437372
+    ],
+    "state": 20.0000001999269,
+    "wall_s": 99.33542503400167,
+    "t_hess_s": 84.68855465100002,
+    "hessian_calls": 20,
+    "t_jac_g_s": 0.185114786,
+    "t_grad_s": 0.109416269,
+    "hessian_nnz": 57517,
+    "hessian_nodes": 17463
+  },
+  "sparse, eliminated": {
+    "kernel": "sparse",
+    "lifted": false,
+    "hessian": "exact",
+    "status": "Solve_Succeeded",
+    "variables": 197,
+    "constraints": 197,
+    "jac_nnz": 197,
+    "iterations": 20,
+    "objective": -4213.933027726061,
+    "design": [
+      0.5988417967114037,
+      0.6426282279841908,
+      1.0000000099962625,
+      0.5732143653333714
+    ],
+    "state": 20.000000199924354,
+    "wall_s": 3.7246455290005542,
+    "t_hess_s": 1.3530107519999999,
+    "hessian_calls": 20,
+    "t_jac_g_s": 0.00024156699999999999,
+    "t_grad_s": 0.006298986000000001,
+    "hessian_nnz": 19503,
+    "hessian_nodes": 19071
+  },
+  "sparse, lifted": {
+    "kernel": "sparse",
+    "lifted": true,
+    "hessian": "exact",
+    "status": "Solve_Succeeded",
+    "variables": 389,
+    "constraints": 389,
+    "jac_nnz": 1923,
+    "iterations": 19,
+    "objective": -4213.933027727117,
+    "design": [
+      0.5911738611639007,
+      0.6449230793816211,
+      1.0000000099963882,
+      0.6120944771205787
+    ],
+    "state": 20.0000001999269,
+    "wall_s": 0.11758578599983593,
+    "t_hess_s": 0.008614712,
+    "hessian_calls": 19,
+    "t_jac_g_s": 0.0022966059999999996,
+    "t_grad_s": 0.0008296389999999999,
+    "hessian_nnz": 2119,
+    "hessian_nodes": 589
+  }
+}
