@@ -1,27 +1,26 @@
-# Référence reçue de Joris Gillis
+# Reference received from Joris Gillis
 
-Fichiers extraits **sans modification** de l'archive reçue
-`dhainaut-20260914T072903Z-1-001.zip` :
+Files extracted **without modification** from the received archive
+`dhainaut-20260914T072903Z-1-001.zip`:
 
-- `sparse_operator.py` : exemple original ;
-- `results.json` : ses résultats de référence ;
-- `sparse_operator.pdf` : « Lifting the operator, not the solve ».
+- `sparse_operator.py`: original example;
+- `results.json`: original reference results;
+- `sparse_operator.pdf`: “Lifting the operator, not the solve”.
 
-Le script et les résultats sont identiques octet pour octet aux références
-utilisées par notre campagne J0/J1. Les empreintes de ces trois fichiers sont
-conservées dans `sha256sums.txt`.
+The script and results are byte-for-byte identical to the references used in
+our J0/J1 campaign. Hashes of these three files are in `sha256sums.txt`.
 
 ```bash
 cd reference
 sha256sum -c sha256sums.txt
 ```
 
-Ces documents sont attribués à Joris Gillis et conservés tels que reçus.
-Aucune licence supplémentaire n'est présumée ou ajoutée aux documents tiers.
-L'archive reçue complète est conservée localement hors Git ; elle n'est pas une
-dépendance du reproducer partagé.
+These documents are attributed to Joris Gillis and preserved as received.
+No additional license is presumed or applied to these third-party documents.
+The complete received archive is retained locally outside Git; it is not a
+dependency of the shared reproducer.
 
-Le script original écrit `results.json` dans son répertoire courant : **ne pas
-le lancer depuis ce dossier**, sous peine d'écraser les valeurs de référence.
-Pour reproduire les expériences, utiliser le pilote au niveau supérieur, qui
-crée un dossier neuf et s'arrête au premier échec.
+The original script writes `results.json` in its current working directory:
+**do not run it from this directory**, as that would overwrite the reference
+values. To reproduce the experiments, use the driver in the parent directory;
+it creates a fresh output directory and stops at the first failure.

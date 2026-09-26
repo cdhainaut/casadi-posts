@@ -1,75 +1,73 @@
-# Mesures conservées et validation
+# Preserved measurements and validation
 
-`results.json` contient les résultats des **16 cas J0/J1**, importés de la
-campagne `joris_controls_j0_j1_20260926T092000Z`. Ce sont des mesures existantes,
-**pas une nouvelle campagne exécutée lors du rangement de ce dépôt**.
+`results.json` contains the **16 J0/J1 cases**, imported from campaign
+`joris_controls_j0_j1_20260926T092000Z`. These are existing measurements,
+**not a new campaign executed while organizing this repository**.
 
 ## Provenance
 
-- Les objets numériques `result` ont été conservés exactement, sans changement
-  de précision, arrondi ni renommage de métrique.
-- L'export retire seulement les commandes contenant des chemins propres à la
-  machine et les codes de retour enfant redondants. Il conserve les statuts,
-  l'enveloppe, les critères et les résultats.
-- `provenance.json` contient l'identifiant de l'archive source et les SHA-256
-  du manifeste de campagne, des sources exécutées et des 16 JSON individuels.
-- `sha256sums.txt` permet de vérifier les fichiers de données partagés ici.
-  Les logs bruts complets restent dans l'archive d'origine ; ils ne sont pas
-  nécessaires pour exécuter le reproducer.
-- Le pilote `run_joris_controls.py` est identique octet pour octet au pilote
-  mesuré. Le module `bench_joris_controls.py` diffère uniquement par un lien
-  documentaire corrigé. Les tests vérifient aussi cette correspondance.
-- La source et le JSON reçus de Joris sont dans `../reference/`, inchangés.
+- Numerical `result` objects were preserved exactly, without rounding,
+  precision changes or metric renaming.
+- The export removes only machine-specific command paths and redundant child
+  return codes. Statuses, resource envelope, checks and results are retained.
+- `provenance.json` records the source archive identifier and SHA-256 hashes
+  of its campaign manifest, executed sources and 16 individual JSON files.
+- `sha256sums.txt` verifies the data files shared here. Complete raw logs remain
+  in the original archive; they are not needed to run the reproducer.
+- `run_joris_controls.py` is byte-for-byte identical to the measured driver.
+  `bench_joris_controls.py` differs only in a corrected documentation link.
+  Tests also verify this correspondence.
+- The source and JSON received from Joris are unchanged in `../reference/`.
 
 ```bash
 cd validation
 sha256sum -c sha256sums.txt
 ```
 
-## Critères fixés avant la campagne
+## Checks fixed before measurement
 
-- Statut `Solve_Succeeded` pour chaque cas.
-- Erreur de la paire `LK−I` ≤ 1e-10 à trois designs admissibles.
-- Violation primale initiale ≤ 1e-8.
-- Résidus finaux non adimensionnés : primal ≤ 1e-6, stationnarité ≤ 1e-4,
-  complémentarité ≤ 1e-4. Ce sont des portes externes, pas les options IPOPT.
-- Accord des objectifs à rang fixé : `rtol=1e-8`, `atol=1e-7`.
-- À J0 : accord avec l'objectif, les dimensions et les nnz J/H archivés par
-  Joris. Les temps et nombres de nœuds de graphe n'étaient pas des portes.
+- `Solve_Succeeded` status for every case.
+- `LK−I` error ≤ 1e-10 at three admissible designs.
+- Initial primal violation ≤ 1e-8.
+- Final unscaled residuals: primal ≤ 1e-6, stationarity ≤ 1e-4,
+  complementarity ≤ 1e-4. These are external checks, not IPOPT settings.
+- Objective agreement at fixed rank: `rtol=1e-8`, `atol=1e-7`.
+- At J0: agreement with Joris's archived objective, dimensions and J/H nonzero
+  counts. Timings and graph node counts were not acceptance criteria.
 
-Les 16 cas ont passé ces critères. Les résidus primaux finaux atteignent environ
-2e-7 et la complémentarité environ 4,2e-5 : ils reflètent notamment la relaxation
-des bornes IPOPT. Ne pas les présenter comme inférieurs à `tol=1e-8`.
-Un même objectif ne démontre ni l'unicité du design ni l'optimalité globale.
+All 16 cases passed. Final primal residuals reach about 2e-7 and complementarity
+about 4.2e-5, reflecting IPOPT's bound relaxation among other effects. Do not
+present them as below `tol=1e-8`. Equal objectives establish neither design
+uniqueness nor global optimality.
 
-## Lire les métriques
+## Reading the metrics
 
-- `solve_seconds` : temps Python de `opti.solve()`, préparation comprise ;
-  `model_build_seconds` mesure séparément la construction du modèle.
-- `hessian_triangle_nnz` : triangle effectivement fourni à IPOPT, pas le
-  Hessien symétrique complet.
-- `hessian_mean_seconds` : moyenne des appels H durant le solve, avec les
-  points/multiplicateurs propres à chaque trajectoire.
-- `hessian_initial_seconds` : trois appels après échauffement, au point initial,
-  facteur objectif 1 et multiplicateurs tous égaux à 1. Coût d'appel externe
-  Python/CasADi inclus ; ce n'est pas la même mesure que la moyenne IPOPT.
-- `peak_rss_kib` : pic RSS Linux du processus entier, contrôles et mesures après
-  solve inclus. Ce n'est ni le pic d'adressage virtuel ni la taille des facteurs.
-- `solution` : objectif, paramètres, commandes aux stations et résidus KKT
-  calculés avec les fonctions effectives du solveur.
+- `solve_seconds`: Python `opti.solve()` time, including preparation;
+  `model_build_seconds` separately measures model construction.
+- `hessian_triangle_nnz`: the triangle supplied to IPOPT, not the full symmetric
+  Hessian.
+- `hessian_mean_seconds`: mean H evaluation time during the solve, using each
+  trajectory's own points and multipliers.
+- `hessian_initial_seconds`: three warmed calls at the initial point, objective
+  factor 1 and all constraint multipliers set to 1. External Python/CasADi call
+  overhead is included; this is not the same measurement as the IPOPT mean.
+- `peak_rss_kib`: Linux peak RSS of the entire process, including post-solve
+  checks and measurements. Neither peak virtual address space nor factor size.
+- `solution`: objective, parameters, station-wise controls and KKT residuals
+  computed using the actual solver functions.
 
-Les fonctions de mesure ne chronomètrent pas séparément la factorisation KKT.
-Les différences entre temps total et temps H ne lui sont donc pas attribuées.
+KKT factorization is not timed separately. The difference between total time
+and Hessian evaluation time must not be attributed to it.
 
-## Revalidation sans nouvelle campagne
+## Revalidate without a new campaign
 
-Depuis `03-control-rank/` :
+From `03-control-rank/`:
 
 ```bash
 python -m pytest tests/test_reference_results.py -q
 ```
 
-Ces tests relisent les données, appliquent les portes d'origine, vérifient que
-les 16 cas attendus sont présents et contrôlent les empreintes des références.
-Pour un nouveau benchmark, utiliser un nouveau dossier `runs/` ; ne pas
-remplacer les mesures publiées par une nouvelle exécution.
+These tests reread the data, apply the original acceptance criteria, check that
+all 16 expected cases are present and verify reference-source hashes.
+Use a fresh `runs/` directory for a new benchmark; do not replace the published
+measurements with a new execution.

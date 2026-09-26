@@ -1,61 +1,81 @@
-# Base d'échange avec Joris
+# Discussion with Joris: from reproduction to a representative problem
 
-Merci pour la note « Lifting the operator, not the solve ». Nous avons repris
-votre exemple pour comprendre ce qui change lorsque les commandes sont moins
-nombreuses que les stations, avant d'ajouter des scénarios multiples ou un
-champ auxiliaire plus grand.
+Thank you for “Lifting the operator, not the solve”. We reproduced your example
+before changing the number of independent controls within one scenario. The
+next useful question is how the operator formulation behaves with many operating
+points, their own controls and states, and a larger auxiliary field.
 
-## Ce qui est reproduit
+## What has been checked
 
-À N=192, les quatre écritures convergent au même objectif que votre référence,
-avec les mêmes dimensions et nnz J/H. Le temps `opti.solve()` passe de
-28,76 s en dense-éliminé à 0,15 s en sparse-levé. Les timings absolus diffèrent
-de votre machine ; le mécanisme et la structure se reproduisent.
+At N=192, all four formulations reach the reference objective with matching
+NLP dimensions and J/H nonzero counts. `opti.solve()` takes 28.76 s for dense
+eliminated and 0.15 s for sparse lifted on our machine.
 
-À N=42, nous conservons votre noyau, objectif, quatre paramètres de design et
-état scalaire, puis écrivons `u=B_r a`, avec 42, 4 et 1 commande indépendante.
-Les bornes restent imposées à `u` aux stations. Les bases réduites sont des
-polynômes de Legendre fixes, incluant la commande constante.
+At N=42, we retain your kernel, objective, four design parameters and scalar
+state, then set `u=B_r a`, with 42, 4 and 1 independent control. Station-wise
+bounds are unchanged. The reduced bases are fixed Legendre polynomials,
+including the constant control.
 
-Le ratio des coûts moyens du Hessien sparse-éliminé / sparse-levé passe de
-×22,7 à ×2,4 puis ×2,0. Les petits temps de solve, de l'ordre de 0,1 s préparation
-comprise, sont proches : un seul run ne permet pas d'en établir finement le
-classement. Le noyau creux reste avantageux même avec une seule commande.
+The mean sparse-eliminated/lifted Hessian timing ratio falls from ×22.7 to
+×2.4 and ×2.0. Small solve times are close, around 0.1 s including preparation;
+one run per case does not establish their fine ranking. The sparse operator
+remains useful even with a single control.
 
-[Équations, tableaux et reproduction](README.md) —
-[mesures et critères](validation/README.md).
+[Equations, tables and reproduction](README.md) —
+[measurements and validation criteria](validation/README.md).
 
-## Notre lecture, à discuter
+## What is already expected
 
-Avec beaucoup de commandes indépendantes, éliminer la réponse donne un Hessien
-réduit dense de grande taille. Avec quelques commandes seulement, ce Hessien
-est petit : exposer un champ peut encore accélérer ses dérivées, mais il reste
-moins à gagner. Cette lecture est cohérente avec les mesures ; ce n'est pas
-un critère universel de choix.
+A smaller reduced decision space has a smaller reduced Hessian. We regard the
+control-rank experiment as a sanity check and quantitative ablation, not as a
+new theoretical observation or evidence against operator lifting.
 
-Nous souhaitons ensuite séparer deux effets qui ne sont **pas encore mesurés** :
+It is also not a model of an entire multipoint problem: one spatially constant
+control **per operating point** still gives T independent controls over T points.
+Those controls belong to separate spatial influence problems. With a shared
+optimized design, the reduced Lagrangian Hessian has a common border and local
+blocks, not necessarily a dense T-by-T control block. Trajectory constraints
+introduce additional coupling.
 
-1. plusieurs scénarios, avec paramètres de design partagés ;
-2. un champ local de taille M>N, lu aux N stations par une application locale.
+The relevant trade-off therefore involves local decision count, number of
+operating points, auxiliary-field size, geometry dependence and KKT fill-in.
 
-## Questions
+## Proposed next comparison — not yet implemented or measured
 
-1. Cette évolution avec le rang des commandes correspond-elle à votre analyse ?
-   Les comparaisons et le paramétrage des commandes vous semblent-ils pertinents ?
-2. Pour un champ plus grand, la paire algébrique exacte suivante est-elle une
-   bonne extension de votre exemple, avec injection `S` et lecture locale `R` ?
+Use N spatial stations and T genuinely distinct operating points, with local
+controls/states at every point. Separate fixed design from shared optimized
+design, then add local trajectory coupling as a distinct experiment.
 
-   ```text
-   L ψ = S y,   z = R ψ,   y + D z = b
-   K = R L⁻¹ S
-   (L + S D R) ψ = S b
-   ```
+For a chosen discrete field operator, keep an exact algebraic pair:
 
-3. Si la fermeture n'a plus de terme identité en `y`, faut-il garder le système
-   par blocs `[L, −S ; D R, 0]`, plutôt que chercher la même élimination locale ?
-4. Quelles mesures de factorisation et de mémoire permettraient de distinguer
-   un coût intrinsèque du champ d'un défaut de formulation ou d'implémentation ?
+```text
+L ψ = S y,   z = R ψ,   y + D z = b
+K = R L⁻¹ S
+(L + S D R) ψ = S b
+```
 
-Le dossier contient un reproducer sans dépendance métier. L'objectif de cet
-échange est de départager ces effets, pas de conclure d'avance à une limite de
-la levée d'opérateur. Aucun résultat multi-scénarios ou 2D n'est revendiqué ici.
+Here the field has M unknowns, potentially M>N. Injection `S` and observation
+`R` must preserve locality; forming `S D R` is not automatically sparse for
+arbitrary maps. A general physical closure may require retaining both response
+and field variables instead of using the final condensed equation.
+
+Compare eliminated and lifted versions of this **same discrete operator**
+before comparing its physical accuracy against an independent dense reference.
+A field approximation and a different reference kernel are not an equal-accuracy
+performance comparison. If the geometry depends on local controls, the operators
+may differ across operating points: shared factorization must not be assumed.
+
+## Questions where your advice would help
+
+1. Is this exact discrete pair an appropriate bridge to a larger auxiliary
+   field, or would you retain the block system even for the linear closure?
+2. If the response identity term is absent, is the block formulation
+   `[L, −S ; D R, 0]` the appropriate starting point, rather than forcing the
+   same condensed form?
+3. What factorization and memory measurements would best distinguish the
+   intrinsic field cost from ordering, fill-in or implementation defects?
+4. How would you structure local injection/observation for moving geometry
+   while preserving differentiability and sparse support?
+
+The current repository contains only the single-scenario reproduction and rank
+ablation. No multipoint, larger-field or trajectory performance is claimed.
