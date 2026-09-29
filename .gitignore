@@ -6,3 +6,4 @@ __pycache__/
 /notes/local/
 # New benchmark runs must not overwrite the published reference measurements.
 /03-control-rank/runs/
+/04-field-ratio/runs/
