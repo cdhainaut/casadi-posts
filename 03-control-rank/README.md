@@ -1,4 +1,4 @@
-# Control rank — a single-scenario sanity check
+# Control rank within one scenario
 
 Reproduction of **Joris Gillis's** example, followed by a change in the number
 of independent controls within one scenario. This is a standalone mathematical
@@ -8,8 +8,8 @@ benchmark with no domain-model dependency.
 sparse operator is reproduced. Reducing the control rank reduces the additional
 benefit of lifting in this example. The structural explanation is elementary:
 a smaller reduced decision space has a smaller reduced Hessian. This experiment
-is a harness check and a quantitative ablation, not a new theoretical result or
-a representative multipoint benchmark.
+is a harness check and a quantitative ablation. Its scope is one scenario;
+section 4 explains the difference from a multipoint problem.
 
 See the [discussion and next questions](DISCUSSION.md) and
 [measurement provenance](validation/README.md).
@@ -48,7 +48,7 @@ are initialized by solving at the common initial design/state/control point.
 
 The four formulations are algebraically equivalent **at a fixed control rank**.
 
-## 2. J0 — reproduction with 192 stations and 192 controls
+## 2. J0: 192 stations and 192 controls
 
 | Formulation | Variables | nnz H (triangle) | Mean H/call | `opti.solve()` time |
 |---|---:|---:|---:|---:|
@@ -63,7 +63,7 @@ all match his historical JSON; this was not a validation requirement.
 J0 uses the adapted measurement harness, not an uninstrumented execution of
 the original script.
 
-## 3. J1 — 42 stations, then 42, 4 and 1 control
+## 3. J1: 42 stations, then 42, 4 and 1 control
 
 `opti.solve()` time, including solver preparation:
 

@@ -41,12 +41,9 @@ def validate_case(row: dict, first: dict) -> None:
     """
     if row["status"] != "Solve_Succeeded":
         raise ValueError(f"Unsuccessful solve: {row['status']}")
-    error = row["compression_error_inf"]
-    if not math.isfinite(error) or error > COMPRESSION_LIMIT:
-        raise ValueError(f"Compression error {error}")
+    if row["compression_error_inf"] > COMPRESSION_LIMIT:
+        raise ValueError(f"Compression error {row['compression_error_inf']}")
     solution = row["solution"]
-    if not math.isfinite(solution["objective"]):
-        raise ValueError("Non-finite objective")
     for key, limit in (("primal_violation_inf", PRIMAL_LIMIT),
                        ("stationarity_inf", DUAL_LIMIT),
                        ("complementarity_inf", COMPLEMENTARITY_LIMIT)):
@@ -63,8 +60,7 @@ def validate_case(row: dict, first: dict) -> None:
 
 def flag_memory_wall(row: dict) -> None:
     """Record the measured JAX memory wall as a finding, not a harness failure."""
-    exception = row.get("exception", "")
-    if "RESOURCE_EXHAUSTED" in exception and "out of memory" in exception.lower():
+    if "RESOURCE_EXHAUSTED" in row.get("exception", ""):
         row["finding"] = "jax_hessian_memory_wall"
 
 
@@ -73,12 +69,9 @@ def validate_jax(row: dict) -> None:
         return
     if row["status"] != "complete":
         raise ValueError(f"Unsuccessful jax bench: {row['status']}")
-    if set(row["comparison"]) != {"objective", "gradient", "hessian"}:
-        raise ValueError("Incomplete derivative comparison")
     for name, comparison in row["comparison"].items():
-        error = comparison["relative_error"]
-        if not math.isfinite(error) or not 0.0 <= error <= 1e-9:
-            raise ValueError(f"{name} mismatch {error}")
+        if comparison["relative_error"] > 1e-9:
+            raise ValueError(f"{name} mismatch {comparison['relative_error']}")
 
 
 def resource_envelope() -> dict:
@@ -128,19 +121,17 @@ def run_command(command: list, label: str, output: Path, campaign: dict, timeout
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--group", choices=("H", "J", "T"), default="H")
     args = parser.parse_args()
     envelope = resource_envelope()
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
-    for name in ("bench_field_ratio.py", "jax_dense_bench.py", "run_field_ratio.py"):
+    for name in ("bench_field_ratio.py", "jax_dense_bench.py"):
         shutil.copyfile(Path(__file__).with_name(name), output / name)
     campaign = {
         "scope": ("H: field ratio z at T=1; T: conditions at z=8; "
                   "J: CasADi versus JAX on the dense writing"),
         "envelope": envelope,
-        "groups": [list(group) for group in H_GROUPS + J_GROUPS + T_GROUPS
-                   if group[0] == args.group],
+        "groups": [list(group) for group in H_GROUPS + J_GROUPS + T_GROUPS],
         "writings": [list(writing) for writing in WRITINGS],
         "gates": {"primal": PRIMAL_LIMIT, "stationarity": DUAL_LIMIT,
                   "complementarity": COMPLEMENTARITY_LIMIT,
@@ -149,7 +140,7 @@ def main() -> None:
         "status": "running", "cases": [],
     }
     try:
-        for phase, n, z, t in H_GROUPS if args.group == "H" else ():
+        for phase, n, z, t in H_GROUPS:
             first = None
             for kernel, lifted in WRITINGS:
                 label = f"{phase}_n{n}_z{z}_t{t}_{kernel}_{'lifted' if lifted else 'eliminated'}"
@@ -167,14 +158,14 @@ def main() -> None:
                                   validate)
                 if first is None:
                     first = row
-        for phase, n, z, t in J_GROUPS if args.group == "J" else ():
+        for phase, n, z, t in J_GROUPS:
             label = f"{phase}_n{n}_z{z}_t{t}"
             command = [sys.executable, "-u", str(output / "jax_dense_bench.py"),
                        "--stations", str(n), "--conditions", str(t),
                        "--output", str(output / f"{label}.json")]
             run_command(command, label, output, campaign, JAX_TIMEOUT_SECONDS,
                         lambda row: validate_jax(row))
-        for phase, n, z, t in T_GROUPS if args.group == "T" else ():
+        for phase, n, z, t in T_GROUPS:
             first = None
             for kernel, lifted in WRITINGS:
                 label = f"{phase}_n{n}_z{z}_t{t}_{kernel}_{'lifted' if lifted else 'eliminated'}"

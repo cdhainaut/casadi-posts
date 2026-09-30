@@ -1,68 +1,66 @@
-# Sharing a few design parameters across many conditions makes a star
+# Shared design creates a common Hessian border
 
-A familiar shape in multidisciplinary optimisation: one small set of design
-parameters, many conditions, and one dense model per condition.
+A small design block can be shared by many conditions. Each condition keeps
+its own controls, state and dense local solve:
 
+```text
+p                         design
+u_k, v_k                  controls and state of condition k
+A(p, v_k)y_k = b(p, u_k, v_k)
 ```
-design parameters p        shared by every condition
-controls u_k, state v_k    one block per condition
-A(p, v_k) y_k = b(p, u_k, v_k)
-```
 
-Writing all of it as a single NLP is the natural thing to do — the optimiser then
-explores the design space and the trajectories at the same time. It also changes
-the shape of the derivatives, in a way that is easy to miss.
+`example.py` compares shared, independent and frozen design at N=16 and K=5.
+The local equations are identical. The dependency layouts and feasible design
+spaces differ; this is a structural comparison, not three equivalent NLPs.
 
 ## The structure
 
-`example.py` builds the same problem twice, with `K = 5` conditions and a dense
-system of size `N = 16` each. The local models are identical; the only difference
-is whether the design block is shared or repeated per condition.
+![three design layouts](hessian_structure.png)
 
-![structure](hessian_structure.png)
-
-| layout | variables | Hessian nonzeros | density | Hessian graph |
+| Layout | Variables | Hessian nonzeros | Triangle density | Hessian graph nodes |
 |---|---:|---:|---:|---:|
-| design shared | 89 | 1 115 | 28 % | 13 058 nodes |
-| design per condition | 105 | 1 155 | 21 % | 13 112 nodes |
+| Shared design | 89 | 1,115 | 28% | 12,672 |
+| Design per condition | 105 | 1,155 | 21% | 12,726 |
+| Frozen design | 85 | 765 | 21% | 3,621 |
 
-Sharing removes sixteen variables, leaves the nonzero count almost unchanged, and
-runs its four design columns through every condition. On the left of the figure
-those columns cross the whole matrix; on the right each condition keeps its own
-block and the matrix stays block-structured.
+Counts refer to the lower triangle of the exact Lagrangian Hessian. Independent
+and frozen layouts use contiguous condition blocks. Shared design has four
+leading variables connected to every condition; the condition-to-condition
+Hessian blocks remain zero. Graph connectivity through the common border does
+not make those blocks dense.
 
-## What it means
+Sharing removes sixteen variables relative to independent design and leaves
+the nonzero count almost unchanged. Freezing removes all four design variables
+and all their derivative terms. The frozen case has no inactive placeholder
+variables.
 
-- **The coupling is structural, not numerical.** Both layouts produce almost the
-  same derivative graph size — 13 058 against 13 112 nodes. What changes is the
-  connectivity: every condition is connected to every other one through the shared
-  block.
-- **Connectivity is what will matter to a sparse factorisation.** A pattern with
-  four wide columns does not factor like a block-diagonal one, even at equal
-  nonzero count. This script does not measure that factorisation — it shows the
-  structure that feeds it.
-- **Order the variables deliberately.** With the design block first or last, the
-  pattern stays as close to block-arrow as it can be.
+## What is measured
 
-If the design parameters were constants instead, each condition would stand alone
-and the Hessian would be block-diagonal — that is the trade of joint optimisation,
-and it is the same trade the companion post measures from the model side.
+The figure and counts describe derivative structure. The archived records also
+contain warmed Hessian evaluation times at a common primal point and closure
+multipliers equal to one. No NLP is solved and no KKT factorisation is timed.
+The sparsity difference alone does not establish a whole-solve penalty.
 
-## Scope
-
-The script builds the Hessian structure; it does not solve an NLP, and it does not
-time a factorisation. What it shows is what the sharing does to the sparsity of the
-derivatives — and that part is not an approximation.
+[Validation records](validation/README.md) include the generator hash, points,
+multipliers, timing samples and sparsity arrays. Earlier K=3 records are kept
+separately as historical data; they are not the table above.
 
 ## Reproduce
 
-```bash
-python example.py     # a few seconds
-```
-
-It prints the table above and writes `hessian_structure.png`.
+From `02-design-control-coupling/` with Python 3.11 or later:
 
 ```bash
-python example.py
-cd validation && python figures.py   # the three layouts measured, including a frozen design
+python -m pip install -r requirements.txt
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1 PYTHONHASHSEED=0 MPLBACKEND=Agg
+ulimit -v 2097152
+ulimit -s 65536
+ulimit -c 0
+nice -n 10 timeout 180s python example.py --output runs/reproduction_NEW
+python -m pytest -x -q
+python validation/figures.py
 ```
+
+Use a fresh output directory. `example.py` exports all three layouts to it;
+`validation/figures.py` redraws the published figures from the archived data.
+Importing `example` does not build models, measure times or write files.

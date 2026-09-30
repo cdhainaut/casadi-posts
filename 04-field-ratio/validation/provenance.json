@@ -1,0 +1,54 @@
+{
+  "historical_campaign": {
+    "id": "field_ratio_20260929T160316Z",
+    "source_sha256": "e3e678d198b107e1ae8060df691735d2ca4fe2c34271c288c556e4560c679263",
+    "source_status": "stopped_at_first_failure",
+    "envelope": {
+      "address_space_bytes": [
+        2147483648,
+        2147483648
+      ],
+      "stack_bytes": [
+        67108864,
+        67108864
+      ],
+      "core_bytes": [
+        0,
+        0
+      ],
+      "threads": 1,
+      "hash_seed": 0,
+      "nice": 10,
+      "timeout_seconds": 300,
+      "jax_timeout_seconds": 900
+    },
+    "exported_groups": {
+      "H": 32,
+      "J": 3,
+      "T": 9
+    },
+    "export": "Complete numerical result objects; private command paths omitted.",
+    "measured_sources_sha256": {
+      "bench_field_ratio.py": "9bf82dfd370628a40fdcc034f8c4fd09ec5e47e6dc01b83838cbddc58cfb9275",
+      "jax_dense_bench.py": "90c06b830b90e186aaa31d7fd890eaeaa0bbf72fdf771edae08660b96a3a23db",
+      "run_field_ratio.py": "29fffdea31b2a7136941c4f1e4c3fdfad9e73ee41b61ff8cbd22fb9e5278d76e"
+    },
+    "stop_case": "T_n42_z8_t32_dense_eliminated",
+    "stop_error": "ValueError: complementarity_inf=0.00029486504843228786 exceeds 0.0001"
+  },
+  "same_chain": {
+    "archive_id": "casadi_posts_finalize_v2_20260929T221958Z",
+    "command": "python jax_same_chain.py --compile-c --output runs/same_chain_NEW.json",
+    "source_sha256": "105e0657fe11af6f8fc5d283449743f23d9e27aee483c4ed3904ab7ece2546eb",
+    "validation": "Nonzero outputs/J/H, nine active columns, parity at three points.",
+    "time_unit": "ms",
+    "statistic": "median of 15 warmed synchronized evaluations"
+  },
+  "invalidated": {
+    "file": "invalidated_results.json",
+    "source_revision": "0f01045",
+    "sha256": "79798bdbb6e5278cc67460a53a22251ef0e5ae2fde4afe5f17564afa99387836",
+    "scope": "same_chain only; the historical H numerical records are not invalidated",
+    "reason": "RBF underflow gives zero outputs/J/H; timed JAX calls were not synchronized."
+  }
+}

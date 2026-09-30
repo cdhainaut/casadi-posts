@@ -31,12 +31,7 @@ def block_edges(label: str, data) -> list[int]:
     design = int(data[f"{label}|design_block"])
     condition = int(data[f"{label}|condition_block"])
     total = int(data[f"{label}|hessian_shape"][0])
-    edges = [design]
-    position = design
-    while position < total - condition:
-        position += condition
-        edges.append(position)
-    return edges[:-1]
+    return list(range(design or condition, total, condition))
 
 
 def hessian_figure(data) -> None:
@@ -107,7 +102,7 @@ def cost_figure(cases: list[dict], data) -> None:
             text = (
                 formatter.format(value)
                 if formatter
-                else (f"{value / 1000:.0f} k" if value >= 1000 else f"{value:.1f} ms")
+                else (f"{value:.0f}" if title == "Hessian graph size" else f"{value:.2f} ms")
             )
             ax.text(value * 1.05, position, text, va="center", fontsize=9.5)
 

@@ -1,15 +1,15 @@
 """Check that the two ways of writing the dense kernel are the same object.
 
 The kernel can be assembled entry by entry in a Python loop, or written as one
-matrix expression. With MX the graph is very different — that was the point of
-the first lesson — but the numbers must be identical, derivatives included.
+matrix expression. With MX the graphs differ, but the values and derivatives
+must agree.
 
 This script builds both forms and compares, at several design points:
 
     the kernel itself
     the outputs
     the gradient of the summed outputs
-    the Lagrangian Hessian of the summed outputs
+    the objective Hessian of the summed outputs
 
 Run:  python check_equivalence.py
 """

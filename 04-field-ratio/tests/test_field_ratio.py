@@ -82,25 +82,6 @@ def test_jax_parity():
         assert np.max(np.abs(reference - candidate)) / scale <= 1e-9, name
 
 
-def test_jax_same_chain_parity():
-    pytest.importorskip("jax")
-    import jax.numpy as jnp
-
-    import jax_same_chain as same
-
-    data = same.synthetic_rig()
-    point_c = cas.DM(data["point"].tolist())
-    point_j = jnp.asarray(data["point"])
-    cas_forward, _, cas_hessian = same.build_casadi(data)
-    jax_forward, _, jax_hessian = same.build_jax(data)
-    for name, cas_fn, jax_fn in (("forward", cas_forward, jax_forward),
-                                 ("hessian", cas_hessian, jax_hessian)):
-        reference = np.asarray(cas_fn(point_c), dtype=float).ravel()
-        candidate = np.asarray(jax_fn(point_j), dtype=float).ravel()
-        scale = max(1.0, float(np.max(np.abs(reference))))
-        assert np.max(np.abs(reference - candidate)) / scale <= 1e-9, name
-
-
 def test_campaign_gates_report_different_stationary_point():
     first = {"solution": {"objective": 1.0, "primal_violation_inf": 0.0,
                           "stationarity_inf": 0.0, "complementarity_inf": 0.0},
@@ -111,6 +92,32 @@ def test_campaign_gates_report_different_stationary_point():
     campaign.validate_case(bad, first)
     assert bad["finding"] == "different_stationary_point"
     assert bad["objective_gap_rel"] > 0.4
+
+
+@pytest.mark.parametrize("key", ["compression_error_inf", "objective"])
+def test_campaign_gates_reject_nonfinite_model_values(key):
+    row = {"status": "Solve_Succeeded", "compression_error_inf": 0.0,
+           "solution": {"objective": 1.0, "primal_violation_inf": 0.0,
+                        "stationarity_inf": 0.0, "complementarity_inf": 0.0}}
+    if key == "objective":
+        row["solution"][key] = float("nan")
+    else:
+        row[key] = float("nan")
+    with pytest.raises(ValueError):
+        campaign.validate_case(row, None)
+
+
+def test_campaign_gates_reject_nonfinite_jax_parity():
+    row = {"status": "complete", "comparison": {
+        name: {"relative_error": 0.0} for name in ("objective", "gradient", "hessian")}}
+    row["comparison"]["hessian"]["relative_error"] = float("nan")
+    with pytest.raises(ValueError, match="hessian mismatch"):
+        campaign.validate_jax(row)
+
+
+def test_campaign_gates_reject_empty_jax_comparison():
+    with pytest.raises(ValueError, match="Incomplete"):
+        campaign.validate_jax({"status": "complete", "comparison": {}})
 
 
 def test_campaign_gates_accept_memory_wall_finding():

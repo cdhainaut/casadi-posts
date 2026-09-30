@@ -1,117 +1,163 @@
-"""Sharing a few design parameters across many conditions makes a star.
+"""Exact derivative structure with shared, independent or frozen design.
 
-A common shape in multidisciplinary optimisation: one small set of design
-parameters, many conditions, and one dense model per condition.
-
-    design parameters p        shared by every condition
-    controls u_k, state v_k    one block per condition
-    A(p, v_k) y_k = b(p, u_k, v_k)
-
-This script builds the same problem twice — once with a design block shared by
-every condition, once with one independent design block per condition — and looks
-at the structure of the Lagrangian Hessian. The local models are identical; only
-the sharing differs.
-
-Run:  python example.py
+Build the same local equations in three layouts. The frozen layout removes
+all design variables. Save numerical records and sparsity patterns in a fresh
+output directory; no calculation runs when this module is imported.
 """
+
+import argparse
+import hashlib
+import json
+import platform
+import time
+from pathlib import Path
 
 import casadi as cas
 import matplotlib.pyplot as plt
 import numpy as np
 
-# ------------------------------------------------------------------ parameters
-N = 16  # size of each dense system
-K = 5  # number of conditions
+N = 16
+K = 5
 OMEGA = 2.0 * np.pi
 WEIGHT = 0.4
 COUPLING = 0.3
 TARGET = 0.5
-design_value = np.array([0.5, 0.3, 1.0, 0.4])
-locator = np.cos(np.pi * (np.arange(N) + 0.5) / N)
+DESIGN_VALUE = np.array([0.5, 0.3, 1.0, 0.4])
+EVALUATIONS = 20
+LAYOUTS = ("design shared", "design per condition", "design frozen")
 
-# --------------------------------------------------------------------- symbols
-shared_design = cas.MX.sym("design", 4)
-local_designs = [cas.MX.sym(f"design_{k}", 4) for k in range(K)]
-controls = cas.MX.sym("controls", N, K)
-state = cas.MX.sym("state", K)
 
-# ------------------------------------------------------- the two design layouts
-layouts = {
-    "design shared": [shared_design] * K,
-    "design per condition": local_designs,
-}
+def local_outputs(design: cas.MX | cas.DM, controls: cas.MX, state: cas.MX,
+                  locator: np.ndarray) -> tuple[cas.MX, cas.MX]:
+    """One dense influence model, unchanged between design layouts."""
+    n = len(locator)
+    coordinates = (locator + 0.12 * design[0] * (1.0 - locator**2)
+                   + 0.08 * design[1] * locator * (1.0 - locator**2))
+    weights = WEIGHT * design[2] * (1.0 - 0.4 * design[3] * locator)
+    span = cas.reshape(coordinates, n, 1)
+    difference = cas.repmat(span, 1, n) - cas.repmat(span.T, n, 1) + cas.MX.eye(n)
+    kernel = ((coordinates[1] - coordinates[0]) / (4.0 * np.pi)) / difference
+    kernel -= cas.diag(cas.diag(kernel))
+    matrix = cas.MX.eye(n) + cas.diag(OMEGA * weights / state) @ kernel
+    rhs = OMEGA * weights * (controls + 0.1 * locator)
+    response = cas.solve(matrix, rhs)
+    argument = controls + COUPLING * (kernel @ response) / state
+    warped = OMEGA * argument - 5.0 * argument**3
+    return cas.sum1(warped * weights), cas.sum1(argument * weights) - TARGET
 
-print(f"{'layout':<22}{'variables':>10}{'nonzeros':>10}{'density':>9}{'graph':>8}")
-structures = {}
-for label, designs in layouts.items():
-    if label == "design shared":
-        variables = cas.vertcat(shared_design, cas.reshape(controls, (N * K, 1)), state)
+
+def build_layout(n: int, conditions: int, layout: str) -> tuple:
+    """Return H, closure Jacobian, common primal point and block sizes."""
+    if layout not in LAYOUTS:
+        raise ValueError(layout)
+    locator = np.cos(np.pi * (np.arange(n) + 0.5) / n)
+    controls = [cas.MX.sym(f"u_{k}", n) for k in range(conditions)]
+    states = [cas.MX.sym(f"v_{k}") for k in range(conditions)]
+    if layout == "design shared":
+        design = cas.MX.sym("p", 4)
+        designs = [design] * conditions
+        blocks = [design] + [cas.vertcat(u, v) for u, v in zip(controls, states)]
+        initial_blocks = [DESIGN_VALUE] + [np.r_[np.full(n, 0.1), 12.0]] * conditions
+        design_block, condition_block = 4, n + 1
+    elif layout == "design per condition":
+        designs = [cas.MX.sym(f"p_{k}", 4) for k in range(conditions)]
+        blocks = [cas.vertcat(p, u, v) for p, u, v in zip(designs, controls, states)]
+        initial_blocks = [np.r_[DESIGN_VALUE, np.full(n, 0.1), 12.0]] * conditions
+        design_block, condition_block = 0, n + 5
     else:
-        variables = cas.vertcat(
-            cas.vertcat(*local_designs), cas.reshape(controls, (N * K, 1)), state
-        )
-
-    objective_terms = []
-    closures = []
-    for k in range(K):
-        design_k = designs[k]
-        column = controls[:, k]
-        coordinates = (
-            locator
-            + 0.12 * design_k[0] * (1.0 - locator**2)
-            + 0.08 * design_k[1] * locator * (1.0 - locator**2)
-        )
-        weights = WEIGHT * design_k[2] * (1.0 - 0.4 * design_k[3] * locator)
-        span = cas.reshape(coordinates, N, 1)
-        difference = cas.repmat(span, 1, N) - cas.repmat(span.T, N, 1) + cas.MX.eye(N)
-        kernel = ((coordinates[1] - coordinates[0]) / (4.0 * np.pi)) / difference
-        kernel = kernel - cas.diag(cas.diag(kernel))
-        matrix = cas.MX.eye(N) + cas.diag(OMEGA * weights / state[k]) @ kernel
-        rhs = OMEGA * weights * (column + 0.1 * locator)
-        response = cas.solve(matrix, rhs)
-        argument = column + COUPLING * (kernel @ response) / state[k]
-        warped = OMEGA * argument - 5.0 * argument**3
-        objective_terms.append(cas.sum1(warped * weights))
-        closures.append(cas.sum1(argument * weights) - TARGET)
-
-    multipliers = cas.MX.sym("lambda", K)
-    lagrangian = sum(objective_terms) + cas.dot(multipliers, cas.vertcat(*closures))
+        designs = [cas.DM(DESIGN_VALUE)] * conditions
+        blocks = [cas.vertcat(u, v) for u, v in zip(controls, states)]
+        initial_blocks = [np.r_[np.full(n, 0.1), 12.0]] * conditions
+        design_block, condition_block = 0, n + 1
+    variables = cas.vertcat(*blocks)
+    terms = [local_outputs(p, u, v, locator) for p, u, v in zip(designs, controls, states)]
+    objective = sum(term[0] for term in terms)
+    closures = cas.vertcat(*[term[1] for term in terms])
+    multipliers = cas.MX.sym("lambda", conditions)
+    lagrangian = objective + cas.dot(multipliers, closures)
     hessian = cas.tril(cas.hessian(lagrangian, variables)[0], True)
-    hessian_function = cas.Function("hessian_of", [variables, multipliers], [hessian])
+    jacobian = cas.jacobian(closures, variables)
+    return (cas.Function("hessian", [variables, multipliers], [hessian]),
+            cas.Function("jacobian", [variables], [jacobian]),
+            np.concatenate(initial_blocks), design_block, condition_block)
 
-    rows, cols = hessian.sparsity().get_triplet()
-    density = hessian.nnz() / (variables.size1() * (variables.size1() + 1) / 2)
-    graph = hessian_function.n_nodes()
-    structures[label] = (np.array(rows), np.array(cols), variables.size1())
-    print(f"{label:<22}{variables.size1():>10}{hessian.nnz():>10}"
-          f"{density:>8.0%}{graph:>8}")
 
-print(
-    "\nThe local models are the same in both rows. Sharing the design block removes\n"
-    "sixteen variables, keeps the nonzeros at the same level, and runs its columns\n"
-    "through every condition."
-)
+def measure(n: int, conditions: int) -> tuple[list[dict], dict]:
+    """Measure the lower Hessian triangle at one common point with lambda=1."""
+    records, patterns = [], {}
+    for layout in LAYOUTS:
+        started = time.perf_counter()
+        hessian, jacobian, point, design_block, condition_block = build_layout(
+            n, conditions, layout)
+        build_seconds = time.perf_counter() - started
+        multipliers = np.ones(conditions)
+        hessian(point, multipliers)
+        samples = []
+        for _ in range(EVALUATIONS):
+            started = time.perf_counter()
+            hessian(point, multipliers)
+            samples.append((time.perf_counter() - started) * 1e3)
+        rows, cols = hessian.sparsity_out(0).get_triplet()
+        records.append({
+            "label": layout, "stations": n, "conditions": conditions,
+            "variables": len(point), "constraints": conditions,
+            "nnz_jacobian": jacobian.nnz_out(0), "nnz_hessian": len(rows),
+            "nodes_jacobian": jacobian.n_nodes(), "nodes_hessian": hessian.n_nodes(),
+            "build_s": build_seconds, "hessian_ms": float(np.median(samples)),
+            "samples_ms": samples, "point": point.tolist(),
+            "multipliers": multipliers.tolist(),
+        })
+        for key, value in {"hessian_rows": rows, "hessian_cols": cols,
+                           "hessian_shape": (len(point), len(point)),
+                           "design_block": design_block,
+                           "condition_block": condition_block}.items():
+            patterns[f"{layout}|{key}"] = np.asarray(value)
+    return records, patterns
 
-# ---------------------------------------------------------------------- figure
-figure, axes = plt.subplots(1, 2, figsize=(10, 5))
-for axis, label in zip(axes, structures):
-    rows, cols, nvars = structures[label]
-    axis.plot(cols, rows, ".", color="#1f4e79" if "shared" in label else "#2e8b57",
-              markersize=2.2)
-    axis.set_xlim(-1, nvars)
-    axis.set_ylim(nvars, -1)
-    axis.set_aspect("equal")
-    axis.set_title(f"{label}\n{nvars} variables, {len(rows)} nonzeros", fontsize=10.5)
-    axis.set_xlabel("variables", fontsize=9.5)
-    edge = 4 if "shared" in label else 0
-    if edge:
-        axis.axvline(edge - 0.5, color="0.5", linewidth=0.7, linestyle=":")
-axes[0].set_ylabel("variables", fontsize=9.5)
-figure.suptitle(
-    "One design block shared by every condition (left), one block per condition (right)",
-    fontsize=11.5,
-    y=0.98,
-)
-figure.tight_layout(rect=(0, 0.02, 1, 0.93))
-figure.savefig("hessian_structure.png", dpi=170)
-print("wrote hessian_structure.png")
+
+def plot_patterns(records: list[dict], patterns: dict, output: Path) -> None:
+    """Draw the shared border and the independent condition blocks."""
+    figure, axes = plt.subplots(1, 3, figsize=(12, 4))
+    for axis, record in zip(axes, records):
+        label = record["label"]
+        rows, cols = (patterns[f"{label}|{key}"] for key in ("hessian_rows", "hessian_cols"))
+        axis.plot(cols, rows, ".", markersize=2)
+        axis.set_xlim(-1, record["variables"])
+        axis.set_ylim(record["variables"], -1)
+        axis.set_aspect("equal")
+        axis.set_title(f"{label}\n{record['variables']} variables, {len(rows)} nonzeros")
+        axis.set_xlabel("variables")
+    axes[0].set_ylabel("variables")
+    figure.tight_layout()
+    figure.savefig(output, dpi=170)
+    plt.close(figure)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, default=Path("runs/reproduction_NEW"))
+    args = parser.parse_args()
+    args.output.mkdir(parents=True, exist_ok=False)
+    records, patterns = measure(N, K)
+    (args.output / "results.json").write_text(json.dumps(records, indent=2) + "\n")
+    np.savez(args.output / "patterns.npz", **patterns)
+    provenance = {
+        "source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "versions": {"python": platform.python_version(), "casadi": cas.__version__,
+                     "numpy": np.__version__},
+        "stations": N, "conditions": K, "triangle": "lower", "repeats": EVALUATIONS,
+        "multiplier_convention": "all closure multipliers 1; objective factor 1",
+    }
+    (args.output / "provenance.json").write_text(json.dumps(provenance, indent=2) + "\n")
+    plot_patterns(records, patterns, args.output / "hessian_structure.png")
+    print(f"{'layout':<22}{'variables':>10}{'nonzeros':>10}{'density':>9}{'graph':>8}")
+    for record in records:
+        nvars = record["variables"]
+        density = record["nnz_hessian"] / (nvars * (nvars + 1) / 2)
+        print(f"{record['label']:<22}{nvars:>10}{record['nnz_hessian']:>10}"
+              f"{density:>8.0%}{record['nodes_hessian']:>8}")
+    print(f"wrote {args.output}")
+
+
+if __name__ == "__main__":
+    main()

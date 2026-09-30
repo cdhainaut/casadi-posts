@@ -14,7 +14,7 @@ design parameters:
 The kernel is written as a matrix expression, not assembled entry by entry: with
 MX the two forms give the same numbers but very different graphs.
 
-Five equivalent writings of the same object:
+Three reformulations and two model ablations:
 
     elimination              y = A \\ b
     SAND                     y is a variable, A y = b is a constraint

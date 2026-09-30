@@ -5,5 +5,6 @@ __pycache__/
 # Local correspondence and original received archives (not part of the shared notes).
 /notes/local/
 # New benchmark runs must not overwrite the published reference measurements.
+/02-design-control-coupling/runs/
 /03-control-rank/runs/
 /04-field-ratio/runs/

@@ -96,16 +96,17 @@ def jax_model(n: int, conditions: int):
         return jnp.sum(states * jnp.sum(warped * weights, axis=1)
                        + jnp.sum(argument * weights, axis=1))
 
-    # Reverse-over-reverse still materialises the full Hessian. This benchmark
-    # does not exploit the independent condition blocks.
+    # Exact Hessian, reverse-over-reverse: jacfwd(jacrev) batches N tangents and
+    # exceeds the 2 GiB envelope from t=8 onward; jacrev(jacrev) is the same
+    # matrix computed row by row (harness fix, traced in the study README).
     return (jax.jit(objective), jax.jit(jax.grad(objective)),
             jax.jit(jax.jacrev(jax.grad(objective))))
 
 
 def timed(function, point, repeats: int = EVAL_REPEATS) -> tuple:
-    warm = function(point)
-    if hasattr(warm, "block_until_ready"):
-        warm.block_until_ready()
+    function(point)
+    if hasattr(function, "lower_compile"):  # jax jit: force completion
+        function(point).block_until_ready()
     timings = []
     value = None
     for _ in range(repeats):
@@ -148,31 +149,27 @@ def main() -> None:
         result["casadi_build_seconds"] = time.perf_counter() - start
         start = time.perf_counter()
         jax_functions = jax_model(n, conditions)
-        result["comparison"] = {}
-        for name, cas_function, jax_function in zip(
-            ("objective", "gradient", "hessian"), cas_functions, jax_functions
-        ):
-            result["phase"] = f"parity_{name}"
-            reference = np.asarray(cas_function(point), dtype=float).ravel()
-            candidate = np.asarray(jax_function(point), dtype=float).ravel()
-            if not np.isfinite(reference).all() or not np.isfinite(candidate).all():
-                raise ValueError(f"Non-finite {name}")
-            scale = max(1.0, float(np.max(np.abs(reference))))
-            error = float(np.max(np.abs(reference - candidate))) / scale
-            if error > 1e-9:
-                raise ValueError(f"CasADi/JAX {name} mismatch exceeds 1e-9")
-            result["comparison"][name] = {"relative_error": error}
-        result["parity_seconds_including_jax_compilation"] = time.perf_counter() - start
+        for function in jax_functions:
+            function(point)
+        result["jax_compile_seconds"] = time.perf_counter() - start
         result["eval_repeats"] = EVAL_REPEATS
+        casadi_values = {}
+        jax_values = {}
         for name, cas_function, jax_function in zip(
             ("objective", "gradient", "hessian"), cas_functions, jax_functions
         ):
-            result["phase"] = f"timing_{name}"
-            _, casadi_seconds = timed(cas_function, point)
-            _, jax_seconds = timed(jax_function, point)
-            result["comparison"][name].update(
-                casadi_seconds=casadi_seconds, jax_seconds=jax_seconds)
-        result["phase"] = "complete"
+            casadi_values[name], casadi_seconds = timed(cas_function, point)
+            jax_values[name], jax_seconds = timed(jax_function, point)
+            reference = np.asarray(casadi_values[name], dtype=float).ravel()
+            candidate = np.asarray(jax_values[name], dtype=float).ravel()
+            scale = max(1.0, float(np.max(np.abs(reference))))
+            result.setdefault("comparison", {})[name] = {
+                "casadi_seconds": casadi_seconds,
+                "jax_seconds": jax_seconds,
+                "relative_error": float(np.max(np.abs(reference - candidate))) / scale,
+            }
+            if result["comparison"][name]["relative_error"] > 1e-9:
+                raise ValueError(f"CasADi/JAX {name} mismatch exceeds 1e-9")
         result["speedup_gradient"] = (
             result["comparison"]["gradient"]["casadi_seconds"]
             / result["comparison"]["gradient"]["jax_seconds"])

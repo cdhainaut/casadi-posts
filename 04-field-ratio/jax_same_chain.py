@@ -1,22 +1,19 @@
-"""CasADi versus JAX on the same lifting-line chain, parity gated before timing.
+"""Compare exact derivatives of an active synthetic chain in CasADi and JAX.
 
-The chain is the generic shape of a sail-aero model: rig geometry, Biot-Savart
-influence matrix, one dense solve, an RBF section polar, force and moment
-recovery. The same formulas and the same numbers are implemented twice, once in
-CasADi and once in JAX, with the same dependence on the shape controls. Parity
-of the wrench and of the Hessian is gated at 1e-9 before any timing is reported.
-
-What is compared is the evaluation time of the forward pass, the Jacobian and
-the Hessian: what a solver pays every iteration.
-
-    OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 \
-    NUMEXPR_NUM_THREADS=1 PYTHONHASHSEED=0 nice -n 10 python jax_same_chain.py
-
-NumPy, CasADi and JAX only. No model dependency.
+Geometry, a regularised vortex kernel, a dense solve and a Gaussian RBF map
+feed six outputs. Inputs to the RBF are dimensionless. Validate values and
+both derivative orders at three points before synchronized CPU timings.
+The chain is a computational example, not a validated aerodynamic model.
 """
 
 import argparse
+import hashlib
 import json
+import os
+import platform
+import resource
+import subprocess
+import tempfile
 from pathlib import Path
 from time import perf_counter
 
@@ -32,9 +29,9 @@ N_UNITS = 3
 N_PER_UNIT = N_PANELS // N_UNITS
 N_CONTROLS = 9  # trim(3), twist_root(3), twist_tip(3)
 N_RBF = 250
-R_CORE = 0.05
+CORE_AREA = 0.05  # m^2, regularises the squared-distance denominator
 CONST = 1.0 / (4.0 * np.pi)
-REYNOLDS = 1e6
+REYNOLDS_REFERENCE = 1e6
 Q = 0.5 * 1.225 * 8.0**2
 N_REPEATS = 15
 PARITY_GATE = 1e-9
@@ -69,7 +66,7 @@ def synthetic_rig() -> dict:
 def build_casadi(data: dict):
     n = N_PANELS
     p = ca.MX.sym("p", N_CONTROLS)
-    eta = np.linspace(0.0, 1.0, n)
+    eta = np.tile(np.linspace(0.0, 1.0, N_PER_UNIT), N_UNITS)
     per_panel_twist = ca.vertcat(*[
         ca.repmat(p[3 + s], N_PER_UNIT, 1)
         + ca.DM(eta[:N_PER_UNIT]).reshape((N_PER_UNIT, 1))
@@ -97,12 +94,13 @@ def build_casadi(data: dict):
     na = ca.sqrt(ax * ax + ay * ay + az * az)
     nb = ca.sqrt(bx * bx + by * by + bz * bz)
     s = na * nb + adotb
-    influence = CONST * abx * (1 / na + 1 / nb) * s / (s * s + R_CORE**2)
+    influence = CONST * abx * (1 / na + 1 / nb) * s / (s * s + CORE_AREA**2)
     rhs = 0.1 + 0.01 * trim + 0.02 * ca.DM(eta)
     gamma = ca.solve(influence + ca.diag(0.02 + 0 * ca.DM(eta)), rhs)
     alpha = rhs + influence @ gamma
     # RBF section polar: squared distances expanded, no 3-D tensor
-    stations = ca.horzcat(alpha, REYNOLDS * (1.0 + 0.1 * p[0]) + 0 * alpha,
+    reynolds = REYNOLDS_REFERENCE * (1.0 + 0.1 * p[0])
+    stations = ca.horzcat(alpha, (reynolds / REYNOLDS_REFERENCE - 1.0) + 0 * alpha,
                           0.04 + 0.01 * per_panel_twist)
     centres = ca.DM(data["centres"])
     r2 = ca.repmat(ca.sum2(stations**2), 1, N_RBF) \
@@ -136,7 +134,7 @@ def build_jax(data: dict):
     centres = jnp.asarray(data["centres"])
     cl_data = jnp.asarray(data["cl"])
     cd_data = jnp.asarray(data["cd"])
-    eta = jnp.linspace(0.0, 1.0, N_PANELS)
+    eta = jnp.tile(jnp.linspace(0.0, 1.0, N_PER_UNIT), N_UNITS)
     sigma2 = 2.0 * float(data["sigma"]) ** 2
 
     def forward(p):
@@ -166,11 +164,12 @@ def build_jax(data: dict):
         na = jnp.sqrt(ax * ax + ay * ay + az * az)
         nb = jnp.sqrt(bx * bx + by * by + bz * bz)
         s = na * nb + adotb
-        influence = CONST * abx * (1 / na + 1 / nb) * s / (s * s + R_CORE**2)
+        influence = CONST * abx * (1 / na + 1 / nb) * s / (s * s + CORE_AREA**2)
         rhs = 0.1 + 0.01 * trim + 0.02 * eta
         gamma = jnp.linalg.solve(influence + jnp.diag(0.02 + 0 * eta), rhs)
         alpha = rhs + influence @ gamma
-        stations = jnp.stack([alpha, REYNOLDS * (1.0 + 0.1 * p[0]) + 0 * alpha,
+        reynolds = REYNOLDS_REFERENCE * (1.0 + 0.1 * p[0])
+        stations = jnp.stack([alpha, (reynolds / REYNOLDS_REFERENCE - 1.0) + 0 * alpha,
                               0.04 + 0.01 * per_panel_twist], axis=-1)
         r2 = jnp.sum(stations**2, axis=1)[:, None] \
             + jnp.sum(centres**2, axis=1)[None, :] - 2.0 * stations @ centres.T
@@ -194,45 +193,62 @@ def build_jax(data: dict):
             jax.jit(jax.hessian(lambda p: jnp.sum(forward(p)))))
 
 
-def timed(function, value) -> float:
+def relative_error(reference, candidate) -> float:
+    """Reject non-finite or mismatched outputs before computing a scaled error."""
+    reference = np.asarray(reference, dtype=float).ravel()
+    candidate = np.asarray(candidate, dtype=float).ravel()
+    if reference.shape != candidate.shape:
+        raise ValueError("Output sizes differ")
+    if not np.isfinite(reference).all() or not np.isfinite(candidate).all():
+        raise ValueError("Non-finite output")
+    scale = max(1.0, float(np.max(np.abs(reference))))
+    error = float(np.max(np.abs(reference - candidate))) / scale
+    if error > PARITY_GATE:
+        raise ValueError(f"Parity error {error} exceeds {PARITY_GATE}")
+    return error
+
+
+def validate(cas_functions, jax_functions, points: np.ndarray) -> list[dict]:
+    """Check active outputs, both derivative orders and every control at each point."""
+    checks = []
+    for point in points:
+        row = {"point": point.tolist()}
+        for name, cas_fn, jax_fn in zip(
+            ("forward", "jacobian", "hessian"), cas_functions, jax_functions
+        ):
+            reference = np.asarray(cas_fn(ca.DM(point)), dtype=float)
+            candidate = np.asarray(jax_fn(jnp.asarray(point)), dtype=float)
+            error = relative_error(reference, candidate)
+            norm = float(np.max(np.abs(reference)))
+            if norm == 0.0:
+                raise ValueError(f"Degenerate {name}: all entries are zero")
+            row[name] = {"relative_error": error, "max_abs": norm}
+            if name == "jacobian":
+                column_norms = np.max(np.abs(reference), axis=0)
+                if np.any(column_norms == 0.0):
+                    raise ValueError("An inactive control has a zero Jacobian column")
+                row["control_column_max_abs"] = column_norms.tolist()
+        checks.append(row)
+    return checks
+
+
+def timed(function, value) -> dict:
+    """Warm once, then include completion of every call in its measured interval."""
     out = function(value)
     if hasattr(out, "block_until_ready"):
-        jax.block_until_ready(out)
+        out.block_until_ready()
     samples = []
     for _ in range(N_REPEATS):
         started = perf_counter()
-        function(value)
-        samples.append(perf_counter() - started)
-    return float(np.median(np.array(samples)) * 1e3)
-
-
-def mechanism(cas_hessian, point) -> dict:
-    """Where the gain comes from: interpretation floor, per-node cost, JIT.
-
-    The interpretation floor is a chain of trivially cheap nodes: if the real
-    chain ran at the same cost per node, its cost would be interpretation and a
-    compiler would remove it. The JIT row compiles the very same CasADi graph to
-    C and times it again: that is what compilation alone is worth.
-    """
-    import os
-    import subprocess
-    import tempfile
-
-    x = ca.MX.sym("x")
-    y = x
-    for _ in range(20000):
-        y = y + 1.0
-    trivial = ca.Function("trivial", [x], [y])
-    value = ca.DM(1.0)
-    trivial(value)
-    samples = []
-    for _ in range(N_REPEATS):
-        started = perf_counter()
-        trivial(value)
+        out = function(value)
+        if hasattr(out, "block_until_ready"):
+            out.block_until_ready()
         samples.append((perf_counter() - started) * 1e3)
-    trivial_us = 1e3 * float(np.median(np.array(samples))) / trivial.n_nodes()
+    return {"median_ms": float(np.median(samples)), "samples_ms": samples}
 
-    plain = timed(cas_hessian, point)
+
+def compiled_hessian(cas_hessian, points: np.ndarray, point) -> dict:
+    """Compile the same graph; gate parity at all points before synchronized timing."""
     with tempfile.TemporaryDirectory() as folder:
         previous = os.getcwd()
         os.chdir(folder)
@@ -243,61 +259,79 @@ def mechanism(cas_hessian, point) -> dict:
         sources = sorted(Path(folder).glob("same_chain*.c"))
         include = Path(ca.__file__).resolve().parent / "include"
         shared = Path(folder) / "libsame_chain.so"
+        started = perf_counter()
         subprocess.run(
             ["gcc", "-O2", "-fPIC", "-shared", "-o", str(shared),
              *[str(s) for s in sources], f"-I{include}", f"-I{include / 'casadi'}",
-             "-lm"], check=True, capture_output=True)
-        compiled = timed(ca.external(cas_hessian.name(), str(shared)), point)
+             "-lm"], check=True, capture_output=True, timeout=300)
+        compile_seconds = perf_counter() - started
+        compiled = ca.external(cas_hessian.name(), str(shared))
+        errors = [relative_error(cas_hessian(p), compiled(p)) for p in points]
+        timing = timed(compiled, point)
+    return {"compiler": "gcc -O2", "compile_seconds": compile_seconds,
+            "parity_errors": errors, **timing}
+
+
+def provenance() -> dict:
+    """Record the measured source and the actual Linux execution envelope."""
+    cpu_model = next((line.split(":", 1)[1].strip()
+                      for line in Path("/proc/cpuinfo").read_text().splitlines()
+                      if line.startswith("model name")), platform.processor())
     return {
-        "trivial_node_us": trivial_us,
-        "chain_node_us": 1e3 * plain / cas_hessian.n_nodes(),
-        "chain_nodes": cas_hessian.n_nodes(),
-        "hessian_interpreted_ms": plain,
-        "hessian_compiled_ms": compiled,
-        "compile_alone_speedup": plain / compiled,
+        "source_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "versions": {"python": platform.python_version(), "numpy": np.__version__,
+                     "jax": jax.__version__, "casadi": ca.__version__},
+        "cpu_model": cpu_model, "architecture": platform.machine(),
+        "cpu_affinity": sorted(os.sched_getaffinity(0)),
+        "address_space_bytes": resource.getrlimit(resource.RLIMIT_AS),
+        "stack_bytes": resource.getrlimit(resource.RLIMIT_STACK),
+        "core_bytes": resource.getrlimit(resource.RLIMIT_CORE),
+        "nice": os.getpriority(os.PRIO_PROCESS, 0),
+        "environment": {key: os.environ.get(key) for key in (
+            "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS",
+            "NUMEXPR_NUM_THREADS", "PYTHONHASHSEED", "XLA_FLAGS")},
     }
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=str, default=None)
-    parser.add_argument("--mechanism", action="store_true",
-                        help="also measure the interpretation floor and the "
-                             "same graph compiled to C (needs gcc)")
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--compile-c", action="store_true", help="compare the same C graph")
     args = parser.parse_args()
+    if args.output.exists():
+        raise FileExistsError(args.output)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
     data = synthetic_rig()
-    point_c = ca.DM(data["point"].tolist())
-    point_j = jnp.asarray(data["point"])
-    cas_forward, cas_jacobian, cas_hessian = build_casadi(data)
-    jax_forward, jax_jacobian, jax_hessian = build_jax(data)
-
+    points = np.stack([data["point"], data["point"] + 0.25, data["point"] - 0.5])
     report = {"n_panels": N_PANELS, "n_controls": N_CONTROLS, "n_rbf": N_RBF,
-              "seed": SEED, "parity_gate": PARITY_GATE,
-              "versions": {"jax": jax.__version__, "casadi": ca.__version__}}
-    for name, cas_fn, jax_fn in (("forward", cas_forward, jax_forward),
-                                 ("jacobian", cas_jacobian, jax_jacobian),
-                                 ("hessian", cas_hessian, jax_hessian)):
-        reference = np.asarray(cas_fn(point_c), dtype=float).ravel()
-        candidate = np.asarray(jax_fn(point_j), dtype=float).ravel()
-        scale = max(1.0, float(np.max(np.abs(reference))))
-        report[f"{name}_parity_rel"] = float(np.max(np.abs(reference - candidate))) / scale
-        if report[f"{name}_parity_rel"] > PARITY_GATE:
-            report["status"] = "parity_fail"
-            print(json.dumps(report, indent=2))
-            raise SystemExit(1)
-    for name, cas_fn, jax_fn in (("forward", cas_forward, jax_forward),
-                                 ("jacobian", cas_jacobian, jax_jacobian),
-                                 ("hessian", cas_hessian, jax_hessian)):
-        report[name] = {"casadi_ms": timed(cas_fn, point_c),
-                        "jax_ms": timed(jax_fn, point_j)}
-        report[f"{name}_speedup"] = report[name]["casadi_ms"] / report[name]["jax_ms"]
-    if args.mechanism:
-        report["mechanism"] = mechanism(cas_hessian, point_c)
-    report["status"] = "complete"
-    print(json.dumps(report, indent=2))
-    if args.output:
-        with open(args.output, "w") as stream:
-            json.dump(report, stream, indent=2)
+              "seed": SEED, "parity_gate": PARITY_GATE, "repeats": N_REPEATS,
+              "rbf_features": ["alpha", "Re/Re_reference - 1", "relative_thickness"],
+              "hessian_scalar": "sum of the six synthetic outputs",
+              "provenance": provenance(), "status": "preflight"}
+    try:
+        cas_functions = build_casadi(data)
+        jax_functions = build_jax(data)
+        started = perf_counter()
+        report["validation"] = validate(cas_functions, jax_functions, points)
+        report["validation_seconds_including_jax_compilation"] = perf_counter() - started
+        for name, cas_fn, jax_fn in zip(
+            ("forward", "jacobian", "hessian"), cas_functions, jax_functions
+        ):
+            cas_timing = timed(cas_fn, ca.DM(data["point"]))
+            jax_timing = timed(jax_fn, jnp.asarray(data["point"]))
+            report[name] = {"casadi": cas_timing, "jax": jax_timing,
+                            "speedup": cas_timing["median_ms"] / jax_timing["median_ms"]}
+        if args.compile_c:
+            report["compiled_hessian"] = compiled_hessian(
+                cas_functions[2], points, ca.DM(data["point"]))
+        report["status"] = "complete"
+    except Exception as exc:
+        report.update(status="failed", exception=f"{type(exc).__name__}: {exc}")
+        raise
+    finally:
+        report["peak_rss_kib"] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        args.output.write_text(json.dumps(report, indent=2, allow_nan=False) + "\n")
+    print(json.dumps(report, indent=2, allow_nan=False))
 
 
 if __name__ == "__main__":

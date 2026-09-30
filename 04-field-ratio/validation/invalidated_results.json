@@ -1,0 +1,300 @@
+{
+  "note": "Published measurements. Field ratio homotopy and same-chain comparison.",
+  "campaign": "runs/field_ratio_20260929T160316Z",
+  "same_chain": {
+    "n_panels": 42,
+    "n_controls": 9,
+    "n_rbf": 250,
+    "seed": 7,
+    "parity_gate": 1e-09,
+    "versions": {
+      "jax": "0.10.2",
+      "casadi": "3.7.2"
+    },
+    "forward_parity_rel": 0.0,
+    "jacobian_parity_rel": 0.0,
+    "hessian_parity_rel": 0.0,
+    "forward": {
+      "casadi_ms": 0.2229510009783553,
+      "jax_ms": 0.01656099993851967
+    },
+    "forward_speedup": 13.462411799168455,
+    "jacobian": {
+      "casadi_ms": 0.662488999296329,
+      "jax_ms": 0.013585999113274738
+    },
+    "jacobian_speedup": 48.76262641950402,
+    "hessian": {
+      "casadi_ms": 1.2578139994730009,
+      "jax_ms": 0.017913998817675747
+    },
+    "hessian_speedup": 70.21402715690232,
+    "mechanism": {
+      "trivial_node_us": 0.012457627130703045,
+      "chain_node_us": 0.3046500000670932,
+      "chain_nodes": 4120,
+      "hessian_interpreted_ms": 1.255158000276424,
+      "hessian_compiled_ms": 1.1142520015710033,
+      "compile_alone_speedup": 1.126457927386942
+    },
+    "status": "complete"
+  },
+  "homotopy": {
+    "H_n42_z128_t1_dense_eliminated": {
+      "objective": -921.79785,
+      "iterations": 12,
+      "solve_seconds": 0.145,
+      "hessian_triangle_nnz": 1128,
+      "hessian_mean_ms": 4.501,
+      "finding": null
+    },
+    "H_n42_z128_t1_dense_lifted": {
+      "objective": -921.79785,
+      "iterations": 13,
+      "solve_seconds": 0.15,
+      "hessian_triangle_nnz": 3142,
+      "hessian_mean_ms": 3.438,
+      "finding": null
+    },
+    "H_n42_z128_t1_sparse_eliminated": {
+      "objective": -921.79785,
+      "iterations": 12,
+      "solve_seconds": 25.496,
+      "hessian_triangle_nnz": 1128,
+      "hessian_mean_ms": 2083.969,
+      "finding": null
+    },
+    "H_n42_z128_t1_sparse_lifted": {
+      "objective": -651.524401,
+      "iterations": 86,
+      "solve_seconds": 5.83,
+      "hessian_triangle_nnz": 11137,
+      "hessian_mean_ms": 43.105,
+      "finding": null
+    },
+    "H_n42_z16_t1_dense_eliminated": {
+      "objective": -921.79785,
+      "iterations": 12,
+      "solve_seconds": 0.14,
+      "hessian_triangle_nnz": 1128,
+      "hessian_mean_ms": 4.517,
+      "finding": null
+    },
+    "H_n42_z16_t1_dense_lifted": {
+      "objective": -921.79785,
+      "iterations": 13,
+      "solve_seconds": 0.147,
+      "hessian_triangle_nnz": 3142,
+      "hessian_mean_ms": 3.571,
+      "finding": null
+    },
+    "H_n42_z16_t1_sparse_eliminated": {
+      "objective": -921.79785,
+      "iterations": 12,
+      "solve_seconds": 0.468,
+      "hessian_triangle_nnz": 1128,
+      "hessian_mean_ms": 31.257,
+      "finding": null
+    },
+    "H_n42_z16_t1_sparse_lifted": {
+      "objective": -921.79785,
+      "iterations": 22,
+      "solve_seconds": 0.158,
+      "hessian_triangle_nnz": 1729,
+      "hessian_mean_ms": 0.784,
+      "finding": null
+    },
+    "H_n42_z1_t1_dense_eliminated": {
+      "objective": -921.79785,
+      "iterations": 12,
+      "solve_seconds": 0.168,
+      "hessian_triangle_nnz": 1128,
+      "hessian_mean_ms": 5.63,
+      "finding": null
+    },
+    "H_n42_z1_t1_dense_lifted": {
+      "objective": -921.79785,
+      "iterations": 13,
+      "solve_seconds": 0.166,
+      "hessian_triangle_nnz": 3142,
+      "hessian_mean_ms": 3.932,
+      "finding": null
+    },
+    "H_n42_z1_t1_sparse_eliminated": {
+      "objective": -921.79785,
+      "iterations": 12,
+      "solve_seconds": 0.104,
+      "hessian_triangle_nnz": 1128,
+      "hessian_mean_ms": 0.94,
+      "finding": null
+    },
+    "H_n42_z1_t1_sparse_lifted": {
+      "objective": -921.79785,
+      "iterations": 15,
+      "solve_seconds": 0.095,
+      "hessian_triangle_nnz": 469,
+      "hessian_mean_ms": 0.069,
+      "finding": null
+    },
+    "H_n42_z2_t1_dense_eliminated": {
+      "objective": -921.79785,
+      "iterations": 12,
+      "solve_seconds": 0.154,
+      "hessian_triangle_nnz": 1128,
+      "hessian_mean_ms": 4.961,
+      "finding": null
+    },
+    "H_n42_z2_t1_dense_lifted": {
+      "objective": -921.79785,
+      "iterations": 13,
+      "solve_seconds": 0.166,
+      "hessian_triangle_nnz": 3142,
+      "hessian_mean_ms": 3.911,
+      "finding": null
+    },
+    "H_n42_z2_t1_sparse_eliminated": {
+      "objective": -921.79785,
+      "iterations": 12,
+      "solve_seconds": 0.107,
+      "hessian_triangle_nnz": 1128,
+      "hessian_mean_ms": 1.347,
+      "finding": null
+    },
+    "H_n42_z2_t1_sparse_lifted": {
+      "objective": -921.79785,
+      "iterations": 18,
+      "solve_seconds": 0.095,
+      "hessian_triangle_nnz": 553,
+      "hessian_mean_ms": 0.103,
+      "finding": null
+    },
+    "H_n42_z32_t1_dense_eliminated": {
+      "objective": -921.79785,
+      "iterations": 12,
+      "solve_seconds": 0.142,
+      "hessian_triangle_nnz": 1128,
+      "hessian_mean_ms": 4.758,
+      "finding": null
+    },
+    "H_n42_z32_t1_dense_lifted": {
+      "objective": -921.79785,
+      "iterations": 13,
+      "solve_seconds": 0.141,
+      "hessian_triangle_nnz": 3142,
+      "hessian_mean_ms": 3.415,
+      "finding": null
+    },
+    "H_n42_z32_t1_sparse_eliminated": {
+      "objective": -921.79785,
+      "iterations": 12,
+      "solve_seconds": 1.99,
+      "hessian_triangle_nnz": 1128,
+      "hessian_mean_ms": 155.657,
+      "finding": null
+    },
+    "H_n42_z32_t1_sparse_lifted": {
+      "objective": -921.79785,
+      "iterations": 36,
+      "solve_seconds": 0.371,
+      "hessian_triangle_nnz": 3073,
+      "hessian_mean_ms": 2.859,
+      "finding": null
+    },
+    "H_n42_z4_t1_dense_eliminated": {
+      "objective": -921.79785,
+      "iterations": 12,
+      "solve_seconds": 0.144,
+      "hessian_triangle_nnz": 1128,
+      "hessian_mean_ms": 4.607,
+      "finding": null
+    },
+    "H_n42_z4_t1_dense_lifted": {
+      "objective": -921.79785,
+      "iterations": 13,
+      "solve_seconds": 0.169,
+      "hessian_triangle_nnz": 3142,
+      "hessian_mean_ms": 4.24,
+      "finding": null
+    },
+    "H_n42_z4_t1_sparse_eliminated": {
+      "objective": -921.79785,
+      "iterations": 12,
+      "solve_seconds": 0.131,
+      "hessian_triangle_nnz": 1128,
+      "hessian_mean_ms": 3.244,
+      "finding": null
+    },
+    "H_n42_z4_t1_sparse_lifted": {
+      "objective": -921.79785,
+      "iterations": 21,
+      "solve_seconds": 0.103,
+      "hessian_triangle_nnz": 721,
+      "hessian_mean_ms": 0.129,
+      "finding": null
+    },
+    "H_n42_z64_t1_dense_eliminated": {
+      "objective": -921.79785,
+      "iterations": 12,
+      "solve_seconds": 0.138,
+      "hessian_triangle_nnz": 1128,
+      "hessian_mean_ms": 4.252,
+      "finding": null
+    },
+    "H_n42_z64_t1_dense_lifted": {
+      "objective": -921.79785,
+      "iterations": 13,
+      "solve_seconds": 0.146,
+      "hessian_triangle_nnz": 3142,
+      "hessian_mean_ms": 3.417,
+      "finding": null
+    },
+    "H_n42_z64_t1_sparse_eliminated": {
+      "objective": -921.79785,
+      "iterations": 12,
+      "solve_seconds": 6.296,
+      "hessian_triangle_nnz": 1128,
+      "hessian_mean_ms": 508.467,
+      "finding": null
+    },
+    "H_n42_z64_t1_sparse_lifted": {
+      "objective": -834.372626,
+      "iterations": 56,
+      "solve_seconds": 1.343,
+      "hessian_triangle_nnz": 5761,
+      "hessian_mean_ms": 10.994,
+      "finding": null
+    },
+    "H_n42_z8_t1_dense_eliminated": {
+      "objective": -921.79785,
+      "iterations": 12,
+      "solve_seconds": 0.158,
+      "hessian_triangle_nnz": 1128,
+      "hessian_mean_ms": 5.086,
+      "finding": null
+    },
+    "H_n42_z8_t1_dense_lifted": {
+      "objective": -921.79785,
+      "iterations": 13,
+      "solve_seconds": 0.157,
+      "hessian_triangle_nnz": 3142,
+      "hessian_mean_ms": 3.772,
+      "finding": null
+    },
+    "H_n42_z8_t1_sparse_eliminated": {
+      "objective": -921.79785,
+      "iterations": 12,
+      "solve_seconds": 0.19,
+      "hessian_triangle_nnz": 1128,
+      "hessian_mean_ms": 8.579,
+      "finding": null
+    },
+    "H_n42_z8_t1_sparse_lifted": {
+      "objective": -921.79785,
+      "iterations": 19,
+      "solve_seconds": 0.113,
+      "hessian_triangle_nnz": 1057,
+      "hessian_mean_ms": 0.28,
+      "finding": null
+    }
+  }
+}

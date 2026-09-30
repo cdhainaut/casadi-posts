@@ -1,5 +1,4 @@
-# Versions used for the published measurements; Python 3.11.15.
+# Measured versions; Python 3.11.15. Homotopy and plotting only.
 casadi==3.7.2
 numpy==2.4.6
-# Optional, only for the J group of the campaign (CasADi versus JAX):
-jax==0.10.2
+matplotlib==3.10.9
